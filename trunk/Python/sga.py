@@ -26,7 +26,7 @@ class sgaGenotype:
 		self.genomeCompareFunc = genomeCompareFunc
 		self.AlleleAffectValue = 0.005
 		self.MutationProbability = 1.0/(Amount * len(alleleGroups))
-		self.LocusGroups = [[sgaLocus(algr) for algr in alleleGroups] for x in range(Amount)]
+		self.Lgroups = [[sgaLocus(algr) for algr in alleleGroups] for x in range(Amount)]
 		# Initializing random generators
 		self.randmut = random.Random()
 		self.randsel = random.Random()
@@ -36,7 +36,7 @@ class sgaGenotype:
 	
 	def __GenerateIndividual(self, GenomeNo):
 		assert GenomeNo in [0,1]
-		for group in self.LocusGroups:
+		for group in self.Lgroups:
 			for locus in group:
 				al = None
 				# Does mutation occur
@@ -59,7 +59,7 @@ class sgaGenotype:
 		afirst  = self.AlleleAffectValue if BetterGenome == 0 else -self.AlleleAffectValue
 		asecond = self.AlleleAffectValue if BetterGenome == 1 else -self.AlleleAffectValue
 		
-		for group in self.LocusGroups:
+		for group in self.Lgroups:
 			for locus in group:
 				pfirst  = locus.Alleles[locus.Genes[0]] + afirst
 				psecond = locus.Alleles[locus.Genes[1]] + asecond
@@ -82,16 +82,16 @@ class sgaGenotype:
 				self.__AffectAlleles(BetterGenome,UpdateBest)
 	
 	def DumpGenotype(self):
-		for ixg,group in enumerate(self.LocusGroups):
+		for ixg,group in enumerate(self.Lgroups):
 			for ixl,locus in enumerate(group):
 				for ixa,allele in enumerate(locus.Alleles):
 					print "Grp_"+str(ixg),"|","Loc_"+str(ixl),"|",allele,"=>",locus.Alleles[allele],"prob."
 
 def testSGA(gen):
 	# Try to find x,y,z such that equation x^2 - y^2 - z^2 - 27 = 0
-	diff0 = abs(gen.LocusGroups[0][0].Genes[0]**2 - gen.LocusGroups[1][0].Genes[0]**2 - gen.LocusGroups[2][0].Genes[0]**2 - 27)
-	diff1 = abs(gen.LocusGroups[0][0].Genes[1]**2 - gen.LocusGroups[1][0].Genes[1]**2 - gen.LocusGroups[2][0].Genes[1]**2 - 27)
-	diffb = abs(gen.LocusGroups[0][0].Genes[2]**2 - gen.LocusGroups[1][0].Genes[2]**2 - gen.LocusGroups[2][0].Genes[2]**2 - 27)
+	diff0 = abs(gen.Lgroups[0][0].Genes[0]**2 - gen.Lgroups[0][1].Genes[0]**2 - gen.Lgroups[0][2].Genes[0]**2 - 27)
+	diff1 = abs(gen.Lgroups[0][0].Genes[1]**2 - gen.Lgroups[0][1].Genes[1]**2 - gen.Lgroups[0][2].Genes[1]**2 - 27)
+	diffb = abs(gen.Lgroups[0][0].Genes[2]**2 - gen.Lgroups[0][1].Genes[2]**2 - gen.Lgroups[0][2].Genes[2]**2 - 27)
 	better = None
 	update = None
 	if diff0 < diff1:
@@ -105,8 +105,7 @@ def testSGA(gen):
 
 if __name__ == "__main__":
 	print 'Solving equation x^2 - y^2 - z^2 - 27 = 0'
-	gen = sgaGenotype([range(2,61)], 3, testSGA)
-	gen.Evolve(5000)
-	print 'Best try:       ',str(gen.LocusGroups[0][0].Genes[2])+'^2 - '+str(gen.LocusGroups[1][0].Genes[2])+'^2 - '+str(gen.LocusGroups[2][0].Genes[2])+'^2 - 27 =' \
-		,gen.LocusGroups[0][0].Genes[2]**2 - gen.LocusGroups[1][0].Genes[2]**2 - gen.LocusGroups[2][0].Genes[2]**2 - 27
-	
+	gen = sgaGenotype([range(2,61),range(2,61),range(2,61)], 1, testSGA)
+	gen.Evolve(3000)
+	print 'Best try:       ',str(gen.Lgroups[0][0].Genes[2])+'^2 - '+str(gen.Lgroups[0][1].Genes[2])+'^2 - '+str(gen.Lgroups[0][2].Genes[2])+'^2 - 27 =' \
+		                        ,gen.Lgroups[0][0].Genes[2]**2 - gen.Lgroups[0][1].Genes[2]**2 - gen.Lgroups[0][2].Genes[2]**2 - 27
