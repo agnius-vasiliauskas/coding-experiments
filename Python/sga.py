@@ -1,3 +1,12 @@
+###############################################################################
+# Evolution optimization strategy, based on genes frequency in genotype.      #
+# Suitable for solving NP-complete problems such as generating sudoku game,   #
+# tasks scheduling, designing networks and etc.                               #
+# Algorithm idea is taken from:                                               #
+# http://www.cad.polito.it/FullDB/exact/sac98.html                            #
+# Implemented by: vasiliauskas.agnius@gmail.com                               #
+###############################################################################
+
 import random
 
 class sgaLocus:
