@@ -22,9 +22,12 @@ class sgaGenotype:
 	Class for defining population genotype.
 	Main class for evolving problem solutions
 	"""
-	def __init__(self, alleleGroups, Amount, genomeCompareFunc):
-		self.genomeCompareFunc = genomeCompareFunc
+	def __init__(self, alleleGroups, Amount, FitnessFunc, NotifyFunc = None, Minimize = True):
+		self.FitnessFunc = FitnessFunc
+		self.NotifyFunc = NotifyFunc
+		self.Minimize = Minimize
 		self.AlleleAffectValue = 0.005
+		self.Fitness = [None, None, None]  # [FirstGenome, SecondGenome, BestGenome]
 		self.MutationProbability = 1.0/(Amount * len(alleleGroups))
 		self.Lgroups = [[sgaLocus(algr) for algr in alleleGroups] for x in range(Amount)]
 		# Initializing random generators
@@ -75,11 +78,27 @@ class sgaGenotype:
 	
 	def Evolve(self,cycles):
 		for iter in range(cycles):
+			BetterGenome, UpdateBest = None, False
 			self.__GenerateIndividual(0)
 			self.__GenerateIndividual(1)
-			BetterGenome,UpdateBest = self.genomeCompareFunc(self)
-			if BetterGenome:
+			self.Fitness[0] = self.FitnessFunc(self,0)
+			self.Fitness[1] = self.FitnessFunc(self,1)
+			if self.Fitness[2] == None:
+				self.Fitness[2] = self.FitnessFunc(self,2)
+			
+			if self.Fitness[0] > self.Fitness[1]:
+				BetterGenome = 0 if not self.Minimize else 1
+			elif self.Fitness[0] < self.Fitness[1]:
+				BetterGenome = 1 if not self.Minimize else 0
+			
+			if BetterGenome != None:
+				if (self.Fitness[BetterGenome] > self.Fitness[2] and not self.Minimize) or \
+					(self.Fitness[BetterGenome] < self.Fitness[2] and self.Minimize):
+						UpdateBest = True
+						self.Fitness[2] = self.Fitness[BetterGenome]
 				self.__AffectAlleles(BetterGenome,UpdateBest)
+				if self.NotifyFunc and UpdateBest:
+					self.NotifyFunc(self,iter)
 	
 	def DumpGenotype(self):
 		for ixg,group in enumerate(self.Lgroups):
@@ -87,25 +106,17 @@ class sgaGenotype:
 				for ixa,allele in enumerate(locus.Alleles):
 					print "Grp_"+str(ixg),"|","Loc_"+str(ixl),"|",allele,"=>",locus.Alleles[allele],"prob."
 
-def testSGA(gen):
+def testFitness(gen,n):
 	# Try to find x,y,z such that equation x^2 - y^2 - z^2 - 27 = 0
-	diff0 = abs(gen.Lgroups[0][0].Genes[0]**2 - gen.Lgroups[0][1].Genes[0]**2 - gen.Lgroups[0][2].Genes[0]**2 - 27)
-	diff1 = abs(gen.Lgroups[0][0].Genes[1]**2 - gen.Lgroups[0][1].Genes[1]**2 - gen.Lgroups[0][2].Genes[1]**2 - 27)
-	diffb = abs(gen.Lgroups[0][0].Genes[2]**2 - gen.Lgroups[0][1].Genes[2]**2 - gen.Lgroups[0][2].Genes[2]**2 - 27)
-	better = None
-	update = None
-	if diff0 < diff1:
-		better = 0
-		update = True if diff0 < diffb else False
-	elif diff1 < diff0:
-		better = 1
-		update = True if diff1 < diffb else False
-	
-	return better,update
+	return abs(gen.Lgroups[0][0].Genes[n]**2-gen.Lgroups[0][1].Genes[n]**2-gen.Lgroups[0][2].Genes[n]**2-27)
+
+def testNotify(gen,iter):
+		print 'iteration_'+str(iter)+':   ',str(gen.Lgroups[0][0].Genes[2])+'^2 - '+\
+											str(gen.Lgroups[0][1].Genes[2])+'^2 - '+\
+											str(gen.Lgroups[0][2].Genes[2])+'^2 - 27 =',gen.Fitness[2]
 
 if __name__ == "__main__":
 	print 'Solving equation x^2 - y^2 - z^2 - 27 = 0'
-	gen = sgaGenotype([range(2,61),range(2,61),range(2,61)], 1, testSGA)
-	gen.Evolve(3000)
-	print 'Best try:       ',str(gen.Lgroups[0][0].Genes[2])+'^2 - '+str(gen.Lgroups[0][1].Genes[2])+'^2 - '+str(gen.Lgroups[0][2].Genes[2])+'^2 - 27 =' \
-		                        ,gen.Lgroups[0][0].Genes[2]**2 - gen.Lgroups[0][1].Genes[2]**2 - gen.Lgroups[0][2].Genes[2]**2 - 27
+	print '--------------------------------------------'
+	gen = sgaGenotype([range(2,61),range(2,61),range(2,61)], 1, testFitness, testNotify, Minimize = True)
+	gen.Evolve(1000)
