@@ -112,8 +112,8 @@ def testFitness(gen,n):
 
 def testNotify(gen,iter):
 		print 'iteration_'+str(iter)+':   ',str(gen.Lgroups[0][0].Genes[2])+'^2 - '+\
-											str(gen.Lgroups[0][1].Genes[2])+'^2 - '+\
-											str(gen.Lgroups[0][2].Genes[2])+'^2 - 27 =',gen.Fitness[2]
+						str(gen.Lgroups[0][1].Genes[2])+'^2 - '+\
+						str(gen.Lgroups[0][2].Genes[2])+'^2 - 27 =',gen.Fitness[2]
 
 if __name__ == "__main__":
 	print 'Solving equation x^2 - y^2 - z^2 - 27 = 0'
