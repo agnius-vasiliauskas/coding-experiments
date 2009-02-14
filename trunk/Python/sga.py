@@ -47,7 +47,7 @@ class sgaGenotype:
 					al = self.randsel.choice(locus.Alleles.keys())
 				# select allele by it`s frequency in genotype
 				else:
-					while not al:
+					while al == None:
 						for allele in locus.Alleles.keys():
 							if self.randfrq.random() < locus.Alleles[allele]:
 								al = allele
