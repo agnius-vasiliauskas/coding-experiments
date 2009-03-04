@@ -1,3 +1,4 @@
+import sys
 from PIL import Image, ImageFilter
 import operator as op
 import aggdraw as d
@@ -15,6 +16,27 @@ def intesectarea(p1,p2,size):
 	iarea = abs(ix2-ix1)*abs(iy2-iy1)
 	if iy2 < iy1 or ix2 < ix1: iarea = 0
 	return iarea
+
+def hassimilararea(ind, clusters):
+	item = op.itemgetter
+	simth = 1.5
+	found = False
+	tx1 = min(clusters[ind],key=item(0))[0]
+	ty1 = min(clusters[ind],key=item(1))[1]
+	tx2 = max(clusters[ind],key=item(0))[0] + block_len
+	ty2 = max(clusters[ind],key=item(1))[1] + block_len
+	tarea = (tx2-tx1)*(ty2-ty1)
+	for i, cl in enumerate(clusters):
+		ax1 = min(cl,key=item(0))[0]
+		ay1 = min(cl,key=item(1))[1]
+		ax2 = max(cl,key=item(0))[0] + block_len
+		ay2 = max(cl,key=item(1))[1] + block_len
+		if i != ind:
+			aarea = (ax2-ax1)*(ay2-ay1)
+			if float(max(aarea,tarea))/min(aarea,tarea) <= simth:
+				found = True
+				break
+	return found
 
 def blockpoints(pix, coords, size):
     xs, ys = coords
@@ -81,8 +103,8 @@ def clusterparts(parts, block_len):
  want to know only big differences.
  """
  parts = sorted(parts, key=op.itemgetter(-1))
- ath = 0.1
- sth = 1.3
+ ath = 0.03
+ sth = 1.5
  clusters = [[parts[0][-1]]]
  
  # assign all parts to clusters
@@ -90,24 +112,33 @@ def clusterparts(parts, block_len):
   x, y = parts[i][-1]
   
   # detect box already in cluster
-  fc = False
+  fc = []
   for k,cl in enumerate(clusters):
-   if fc: break
    for xc,yc in cl:
     ar = intesectarea((xc,yc),(x,y),block_len)
     intrat = float(ar)/(block_len*block_len)
-    if intrat >= ath:
-   	 clusters[k].append((x,y))
-   	 fc = True
+    if intrat > ath:
+   	 if not fc: clusters[k].append((x,y))
+   	 fc.append(k)
    	 break
   
   # if this is new cluster
   if not fc:
    clusters.append([(x,y)])
+  else:
+   # re-clustering boxes if in several clusters at once
+   while len(fc) > 1:
+   	clusters[fc[0]] += clusters[fc[-1]]
+   	del clusters[fc[-1]]
+   	del fc[-1]
  
  item = op.itemgetter
  # filter out small clusters
  clusters = [clust for clust in clusters if Dist((min(clust,key=item(0))[0],min(clust,key=item(1))[1]), (max(clust,key=item(0))[0],max(clust,key=item(1))[1]))/(block_len*1.4) >= sth]
+ 
+ # filter out clusters, which doesn`t have similar area clusters
+ clusters = [clust for x,clust in enumerate(clusters) if hassimilararea(x,clusters)]
+ 
  print 'clusters',len(clusters)
  return clusters
 
@@ -133,8 +164,11 @@ def marksimilar(image, clust, size):
  return image
 
 if __name__ == '__main__':
+ if not sys.argv[1:]:
+  print 'Usage: python image_file options'
+  sys.exit()
  block_len = 15
- im = Image.open("3.jpg")
+ im = Image.open(sys.argv[1])
  lparts = getparts(im, block_len)
  dparts = similarparts(lparts)
  cparts = clusterparts(dparts, block_len)
