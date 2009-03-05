@@ -38,6 +38,32 @@ def hassimilararea(ind, clusters):
 				break
 	return found
 
+def Hausdorff_distance(clust1, clust2, forward, dir):
+    if forward == None:
+        return max(Hausdorff_distance(clust1,clust2,True,dir),Hausdorff_distance(clust1,clust2,False,dir))
+    else:
+        clstart, clend = (clust1,clust2) if forward else (clust2,clust1)
+        dx, dy = dir if forward else (-dir[0],-dir[1])
+        return sum([min([Dist((p1[0]+dx,p1[1]+dy),p2) for p2 in clend]) for p1 in clstart])/len(clstart)
+
+def hassimilarcluster(ind, clusters):
+	item = op.itemgetter
+	idth = 15
+	found = False
+	tx = min(clusters[ind],key=item(0))[0]
+	ty = min(clusters[ind],key=item(1))[1]
+	for i, cl in enumerate(clusters):
+		if i != ind:
+			cx = min(cl,key=item(0))[0]
+			cy = min(cl,key=item(1))[1]
+			dx, dy = cx - tx, cy - ty
+			specdist = Hausdorff_distance(clusters[ind],cl,None,(dx,dy))
+			print 'H dist',specdist
+			if specdist <= idth:
+				found = True
+				break
+	return found
+
 def blockpoints(pix, coords, size):
     xs, ys = coords
     for x in range(xs,xs+size):
@@ -136,8 +162,11 @@ def clusterparts(parts, block_len):
  # filter out small clusters
  clusters = [clust for clust in clusters if Dist((min(clust,key=item(0))[0],min(clust,key=item(1))[1]), (max(clust,key=item(0))[0],max(clust,key=item(1))[1]))/(block_len*1.4) >= sth]
  
- # filter out clusters, which doesn`t have similar area clusters
+ # filter out clusters, which doesn`t have similar area cluster
  clusters = [clust for x,clust in enumerate(clusters) if hassimilararea(x,clusters)]
+ 
+ # filter out clusters, which doesn`t have identical cluster
+ clusters = [clust for x,clust in enumerate(clusters) if hassimilarcluster(x,clusters)]
  
  print 'clusters',len(clusters)
  return clusters
@@ -165,7 +194,9 @@ def marksimilar(image, clust, size):
 
 if __name__ == '__main__':
  if not sys.argv[1:]:
-  print 'Usage: python image_file options'
+  print '-----------------------------------------------'
+  print 'Usage: '+sys.argv[0]+' image_file options'
+  print '-----------------------------------------------'
   sys.exit()
  block_len = 15
  im = Image.open(sys.argv[1])
@@ -173,5 +204,5 @@ if __name__ == '__main__':
  dparts = similarparts(lparts)
  cparts = clusterparts(dparts, block_len)
  im = marksimilar(im, cparts, block_len)
- im.save('analyzed.jpg')
+ im.save(sys.argv[1].split('.')[0] + '_analyzed.jpg')
  im.show()
