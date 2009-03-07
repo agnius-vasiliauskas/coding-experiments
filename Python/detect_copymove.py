@@ -1,7 +1,7 @@
 import sys
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageDraw
 import operator as op
-import aggdraw as d
+from optparse import OptionParser
 
 def Dist(p1,p2):
     x1, y1 = p1
@@ -17,27 +17,6 @@ def intesectarea(p1,p2,size):
 	if iy2 < iy1 or ix2 < ix1: iarea = 0
 	return iarea
 
-def hassimilararea(ind, clusters):
-	item = op.itemgetter
-	simth = 1.5
-	found = False
-	tx1 = min(clusters[ind],key=item(0))[0]
-	ty1 = min(clusters[ind],key=item(1))[1]
-	tx2 = max(clusters[ind],key=item(0))[0] + block_len
-	ty2 = max(clusters[ind],key=item(1))[1] + block_len
-	tarea = (tx2-tx1)*(ty2-ty1)
-	for i, cl in enumerate(clusters):
-		ax1 = min(cl,key=item(0))[0]
-		ay1 = min(cl,key=item(1))[1]
-		ax2 = max(cl,key=item(0))[0] + block_len
-		ay2 = max(cl,key=item(1))[1] + block_len
-		if i != ind:
-			aarea = (ax2-ax1)*(ay2-ay1)
-			if float(max(aarea,tarea))/min(aarea,tarea) <= simth:
-				found = True
-				break
-	return found
-
 def Hausdorff_distance(clust1, clust2, forward, dir):
     if forward == None:
         return max(Hausdorff_distance(clust1,clust2,True,dir),Hausdorff_distance(clust1,clust2,False,dir))
@@ -48,7 +27,7 @@ def Hausdorff_distance(clust1, clust2, forward, dir):
 
 def hassimilarcluster(ind, clusters):
 	item = op.itemgetter
-	idth = 15
+	global opt
 	found = False
 	tx = min(clusters[ind],key=item(0))[0]
 	ty = min(clusters[ind],key=item(1))[1]
@@ -58,8 +37,7 @@ def hassimilarcluster(ind, clusters):
 			cy = min(cl,key=item(1))[1]
 			dx, dy = cx - tx, cy - ty
 			specdist = Hausdorff_distance(clusters[ind],cl,None,(dx,dy))
-			print 'H dist',specdist
-			if specdist <= idth:
+			if specdist <= int(opt.clsim):
 				found = True
 				break
 	return found
@@ -85,7 +63,8 @@ def getparts(image, block_len):
  w, h = img.size 
  parts = []
  # Bluring image for abandoning image details and noise.
- for n in range(7):
+ global opt
+ for n in range(int(opt.blevel)):
   img = img.filter(ImageFilter.SMOOTH_MORE)
  # Converting image to custom palette
  imagetopalette(img, [x for x in range(256) if x%15 == 0])
@@ -95,14 +74,13 @@ def getparts(image, block_len):
   for y in range(h-block_len):
    data = list(blockpoints(pix, (x,y), block_len)) + [(x,y)]
    parts.append(data)
-   print len(parts), w*h
  parts = sorted(parts)
  return parts
 
 def similarparts(imagparts):
  dupl = []
  th = 200
- cth = 0.05
+ global opt
  l = len(imagparts[0])-1
  
  for i in range(len(imagparts)-1):  
@@ -112,7 +90,7 @@ def similarparts(imagparts):
   
   mean = float(sum(imagparts[i][:l])) / l
   dev = float(sum(abs(mean-val) for val in imagparts[i][:l])) / l
-  if dev/mean >= cth:
+  if dev/mean >= float(opt.coldev):
     if difs <= th:
       if imagparts[i] not in dupl:
        dupl.append(imagparts[i])
@@ -129,8 +107,8 @@ def clusterparts(parts, block_len):
  want to know only big differences.
  """
  parts = sorted(parts, key=op.itemgetter(-1))
- ath = 0.03
- sth = 1.5
+ ath = 0.02
+ sth = 1.2
  clusters = [[parts[0][-1]]]
  
  # assign all parts to clusters
@@ -162,13 +140,9 @@ def clusterparts(parts, block_len):
  # filter out small clusters
  clusters = [clust for clust in clusters if Dist((min(clust,key=item(0))[0],min(clust,key=item(1))[1]), (max(clust,key=item(0))[0],max(clust,key=item(1))[1]))/(block_len*1.4) >= sth]
  
- # filter out clusters, which doesn`t have similar area cluster
- clusters = [clust for x,clust in enumerate(clusters) if hassimilararea(x,clusters)]
- 
- # filter out clusters, which doesn`t have identical cluster
+ # filter out clusters, which doesn`t have identical twin cluster
  clusters = [clust for x,clust in enumerate(clusters) if hassimilarcluster(x,clusters)]
  
- print 'clusters',len(clusters)
  return clusters
 
 def marksimilar(image, clust, size):
@@ -178,31 +152,36 @@ def marksimilar(image, clust, size):
  on similar parts of image.
  """
  if clust:
-  draw = d.Draw(image)
-  br = d.Brush((255,0,0),255)
+  draw = ImageDraw.Draw(image)
   for cl in clust:
    for x,y in cl:
-    draw.rectangle((x,y,x+size,y+size),None,br)
+    draw.rectangle((x,y,x+size,y+size),fill="red")
   for cl in clust:
    cx1 = min([cx for cx,cy in cl])
    cy1 = min([cy for cx,cy in cl])
    cx2 = max([cx for cx,cy in cl]) + block_len
    cy2 = max([cy for cx,cy in cl]) + block_len
-   draw.rectangle([cx1,cy1,cx2,cy2],d.Pen("blue",2),None)
-  draw.flush()
+   draw.rectangle([cx1,cy1,cx2,cy2],outline="blue")
  return image
 
 if __name__ == '__main__':
- if not sys.argv[1:]:
-  print '-----------------------------------------------'
-  print 'Usage: '+sys.argv[0]+' image_file options'
-  print '-----------------------------------------------'
+ cmd = OptionParser("usage: %prog image_file [options]")
+ cmd.add_option('', '--debug', help='Do not search identical regions. (default: %default)', default=0)
+ cmd.add_option('', '--blevel',help='Blur level for degrading image details. (default: %default)', default=8)
+ cmd.add_option('', '--clsim', help='Region similarity threshold. (default: %default)', default=5)
+ cmd.add_option('', '--coldev', help='Block color deviation threshold. (default: %default)', default=0.2)
+ opt, args = cmd.parse_args()
+ if not args:
+  cmd.print_help()
   sys.exit()
+ print 'Analyzing image, please wait... (can take several minutes)'
  block_len = 15
- im = Image.open(sys.argv[1])
+ im = Image.open(args[0])
  lparts = getparts(im, block_len)
  dparts = similarparts(lparts)
- cparts = clusterparts(dparts, block_len)
+ cparts = clusterparts(dparts, block_len) if not int(opt.debug) else [[elem[-1] for elem in dparts]]
  im = marksimilar(im, cparts, block_len)
- im.save(sys.argv[1].split('.')[0] + '_analyzed.jpg')
- im.show()
+ out = args[0].split('.')[0] + '_analyzed.jpg'
+ im.save(out)
+ print 'Done. Found', len(cparts) if not int(opt.debug) else 0, 'identical regions'
+ print 'Output is saved in file -', out
