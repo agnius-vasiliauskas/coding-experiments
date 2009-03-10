@@ -4,9 +4,9 @@ import operator as op
 from optparse import OptionParser
 
 def Dist(p1,p2):
-	"""
-	Euclidean distance between 2 points
-	"""
+    """
+    Euclidean distance between 2 points
+    """
     x1, y1 = p1
     x2, y2 = p2
     return (((x1-x2)*(x1-x2)) + ((y1-y2)*(y1-y2)))**0.5
@@ -24,11 +24,11 @@ def intersectarea(p1,p2,size):
 	return iarea
 
 def Hausdorff_distance(clust1, clust2, forward, dir):
-	"""
-	Function measures distance between 2 sets. (Some kind of similarity between 2 sets if you like).
-	It is modified Hausdorff distance, because instead of max distance - average distance is taken.
-	This is done for function being more error-prone to cluster coordinates.
-	"""
+    """
+    Function measures distance between 2 sets. (Some kind of similarity between 2 sets if you like).
+    It is modified Hausdorff distance, because instead of max distance - average distance is taken.
+    This is done for function being more error-prone to cluster coordinates.
+    """
     if forward == None:
         return max(Hausdorff_distance(clust1,clust2,True,dir),Hausdorff_distance(clust1,clust2,False,dir))
     else:
@@ -57,9 +57,9 @@ def hassimilarcluster(ind, clusters):
 	return found
 
 def blockpoints(pix, coords, size):
-	"""
-	Generator of pixel colors of given block.
-	"""
+    """
+    Generator of pixel colors of given block.
+    """
     xs, ys = coords
     for x in range(xs,xs+size):
         for y in range(ys,ys+size):
