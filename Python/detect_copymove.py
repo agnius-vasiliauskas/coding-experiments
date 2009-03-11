@@ -1,85 +1,98 @@
+# Ad-hoc algorithm for copy-move forgery detection in images.
+# Implemented by - vasiliauskas.agnius@gmail.com
+# Robust match algorithm steps:
+#  1. Blur image for eliminating image details
+#  2. Convert image to degraded palette
+#  3. Decompose image into small NxN pixel blocks
+#  4. Alphabetically order these blocks by their pixel values
+#  5. Extract only these adjacent blocks which have small absolute color difference
+#  6. Cluster these blocks into clusters by intersection area among blocks
+#  7. Extract only these clusters which are bigger than block size
+#  8. Extract only these clusters which have similar cluster, by using some sort of similarity function (in this case Hausdorff distance between clusters)
+#  9. Draw discovered similar clusters on image
+
 import sys
 from PIL import Image, ImageFilter, ImageDraw
 import operator as op
 from optparse import OptionParser
 
 def Dist(p1,p2):
-    """
-    Euclidean distance between 2 points
-    """
-    x1, y1 = p1
-    x2, y2 = p2
-    return (((x1-x2)*(x1-x2)) + ((y1-y2)*(y1-y2)))**0.5
+ """
+ Euclidean distance between 2 points
+ """
+ x1, y1 = p1
+ x2, y2 = p2
+ return (((x1-x2)*(x1-x2)) + ((y1-y2)*(y1-y2)))**0.5
 
 def intersectarea(p1,p2,size):
-	"""
-	Given 2 boxes, this function returns intersection area
-	"""
-	x1, y1 = p1
-	x2, y2 = p2
-	ix1, iy1 = max(x1,x2), max(y1,y2)
-	ix2, iy2 = min(x1+size,x2+size), min(y1+size,y2+size)
-	iarea = abs(ix2-ix1)*abs(iy2-iy1)
-	if iy2 < iy1 or ix2 < ix1: iarea = 0
-	return iarea
+ """
+ Given 2 boxes, this function returns intersection area
+ """
+ x1, y1 = p1
+ x2, y2 = p2
+ ix1, iy1 = max(x1,x2), max(y1,y2)
+ ix2, iy2 = min(x1+size,x2+size), min(y1+size,y2+size)
+ iarea = abs(ix2-ix1)*abs(iy2-iy1)
+ if iy2 < iy1 or ix2 < ix1: iarea = 0
+ return iarea
 
 def Hausdorff_distance(clust1, clust2, forward, dir):
-    """
-    Function measures distance between 2 sets. (Some kind of similarity between 2 sets if you like).
-    It is modified Hausdorff distance, because instead of max distance - average distance is taken.
-    This is done for function being more error-prone to cluster coordinates.
-    """
-    if forward == None:
-        return max(Hausdorff_distance(clust1,clust2,True,dir),Hausdorff_distance(clust1,clust2,False,dir))
-    else:
-        clstart, clend = (clust1,clust2) if forward else (clust2,clust1)
-        dx, dy = dir if forward else (-dir[0],-dir[1])
-        return sum([min([Dist((p1[0]+dx,p1[1]+dy),p2) for p2 in clend]) for p1 in clstart])/len(clstart)
+ """
+ Function measures distance between 2 sets. (Some kind of non-similarity between 2 sets if you like).
+ It is modified Hausdorff distance, because instead of max distance - average distance is taken.
+ This is done for function being more error-prone to cluster coordinates.
+ """
+ if forward == None:
+  return max(Hausdorff_distance(clust1,clust2,True,dir),Hausdorff_distance(clust1,clust2,False,dir))
+ else:
+  clstart, clend = (clust1,clust2) if forward else (clust2,clust1)
+  dx, dy = dir if forward else (-dir[0],-dir[1])
+  return sum([min([Dist((p1[0]+dx,p1[1]+dy),p2) for p2 in clend]) for p1 in clstart])/len(clstart)
 
 def hassimilarcluster(ind, clusters):
-	"""
-	For given cluster tells does it have twin cluster in image or not.
-	"""
-	item = op.itemgetter
-	global opt
-	found = False
-	tx = min(clusters[ind],key=item(0))[0]
-	ty = min(clusters[ind],key=item(1))[1]
-	for i, cl in enumerate(clusters):
-		if i != ind:
-			cx = min(cl,key=item(0))[0]
-			cy = min(cl,key=item(1))[1]
-			dx, dy = cx - tx, cy - ty
-			specdist = Hausdorff_distance(clusters[ind],cl,None,(dx,dy))
-			if specdist <= int(opt.rgsim):
-				found = True
-				break
-	return found
+ """
+ For given cluster tells does it have twin cluster in image or not.
+ """
+ item = op.itemgetter
+ global opt
+ found = False
+ tx = min(clusters[ind],key=item(0))[0]
+ ty = min(clusters[ind],key=item(1))[1]
+ for i, cl in enumerate(clusters):
+  if i != ind:
+   cx = min(cl,key=item(0))[0]
+   cy = min(cl,key=item(1))[1]
+   dx, dy = cx - tx, cy - ty
+   specdist = Hausdorff_distance(clusters[ind],cl,None,(dx,dy))
+   if specdist <= int(opt.rgsim):
+    found = True
+    break
+ return found
 
 def blockpoints(pix, coords, size):
-    """
-    Generator of pixel colors of given block.
-    """
-    xs, ys = coords
-    for x in range(xs,xs+size):
-        for y in range(ys,ys+size):
-            yield pix[x,y]
+ """
+ Generator of pixel colors of given block.
+ """
+ xs, ys = coords
+ for x in range(xs,xs+size):
+  for y in range(ys,ys+size):
+   yield pix[x,y]
 
 def colortopalette(color, palette):
-	"""
-	Convert given color into palette color.
-	"""
-	for a,b in palette:
-		if color >= a and color < b:
-			return b
+ """
+ Convert given color into palette color.
+ """
+ for a,b in palette:
+  if color >= a and color < b:
+   return b
 
 def imagetopalette(image, palcolors):
-	"""
-	Convert given image into custom palette colors
-	"""
-	assert image.mode == 'L', "Only grayscale images supported !"
-	pal = [(palcolors[i],palcolors[i+1]) for i in range(len(palcolors)-1)]
-	image.putdata([colortopalette(c,pal) for c in list(image.getdata())])
+ """
+ Convert given image into custom palette colors
+ """
+ assert image.mode == 'L', "Only grayscale images supported !"
+ pal = [(palcolors[i],palcolors[i+1]) for i in range(len(palcolors)-1)]
+ image.putdata([colortopalette(c,pal) for c in list(image.getdata())])
 
 def getparts(image, block_len):
  """
@@ -116,11 +129,11 @@ def similarparts(imagparts):
   mean = float(sum(imagparts[i][:l])) / l
   dev = float(sum(abs(mean-val) for val in imagparts[i][:l])) / l
   if dev/mean >= float(opt.blcoldev):
-    if difs <= int(opt.blsim):
-      if imagparts[i] not in dupl:
-       dupl.append(imagparts[i])
-      if imagparts[i+1] not in dupl:
-       dupl.append(imagparts[i+1])
+   if difs <= int(opt.blsim):
+    if imagparts[i] not in dupl:
+     dupl.append(imagparts[i])
+    if imagparts[i+1] not in dupl:
+     dupl.append(imagparts[i+1])
 
  return dupl
 
@@ -146,9 +159,9 @@ def clusterparts(parts, block_len):
     ar = intersectarea((xc,yc),(x,y),block_len)
     intrat = float(ar)/(block_len*block_len)
     if intrat > float(opt.blint):
-   	 if not fc: clusters[k].append((x,y))
-   	 fc.append(k)
-   	 break
+     if not fc: clusters[k].append((x,y))
+     fc.append(k)
+     break
   
   # if this is new cluster
   if not fc:
@@ -156,9 +169,9 @@ def clusterparts(parts, block_len):
   else:
    # re-clustering boxes if in several clusters at once
    while len(fc) > 1:
-   	clusters[fc[0]] += clusters[fc[-1]]
-   	del clusters[fc[-1]]
-   	del fc[-1]
+    clusters[fc[0]] += clusters[fc[-1]]
+    del clusters[fc[-1]]
+    del fc[-1]
  
  item = op.itemgetter
  # filter out small clusters
@@ -174,18 +187,25 @@ def marksimilar(image, clust, size):
  Draw discovered similar image regions.
  """
  global opt
+ blocks = []
  if clust:
   draw = ImageDraw.Draw(image)
+  mask = Image.new('RGB', (size,size), 'cyan')
   for cl in clust:
    for x,y in cl:
-    draw.rectangle((x,y,x+size,y+size),fill="red")
+   	im = image.crop((x,y,x+size,y+size))
+   	im = Image.blend(im,mask,0.5)
+   	blocks.append((x,y,im))
+  for bl in blocks:
+  	x,y,im = bl
+  	image.paste(im,(x,y,x+size,y+size))
   if int(opt.imauto):
    for cl in clust:
     cx1 = min([cx for cx,cy in cl])
     cy1 = min([cy for cx,cy in cl])
     cx2 = max([cx for cx,cy in cl]) + block_len
     cy2 = max([cy for cx,cy in cl]) + block_len
-    draw.rectangle([cx1,cy1,cx2,cy2],outline="blue")
+    draw.rectangle([cx1,cy1,cx2,cy2],outline="magenta")
  return image
 
 if __name__ == '__main__':
@@ -194,7 +214,7 @@ if __name__ == '__main__':
  cmd.add_option('', '--imblev',help='Blur level for degrading image details. (default: %default)', default=8)
  cmd.add_option('', '--impalred',help='Image palette reduction factor. (default: %default)', default=15)
  cmd.add_option('', '--rgsim', help='Region similarity threshold. (default: %default)', default=5)
- cmd.add_option('', '--rgsize',help='Region size threshold. (default: %default)', default=1.2)
+ cmd.add_option('', '--rgsize',help='Region size threshold. (default: %default)', default=1.5)
  cmd.add_option('', '--blsim', help='Block similarity threshold. (default: %default)',default=200)
  cmd.add_option('', '--blcoldev', help='Block color deviation threshold. (default: %default)', default=0.2)
  cmd.add_option('', '--blint', help='Block intersection threshold. (default: %default)', default=0.02)
@@ -202,7 +222,7 @@ if __name__ == '__main__':
  if not args:
   cmd.print_help()
   sys.exit()
- print 'Analyzing image, please wait... (can take several minutes)'
+ print 'Analyzing image, please wait... (can take some minutes)'
  block_len = 15
  im = Image.open(args[0])
  lparts = getparts(im, block_len)
