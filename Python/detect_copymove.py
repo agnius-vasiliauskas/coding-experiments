@@ -217,7 +217,7 @@ if __name__ == '__main__':
  cmd.add_option('', '--rgsize',help='Region size threshold. (default: %default)', default=1.5)
  cmd.add_option('', '--blsim', help='Block similarity threshold. (default: %default)',default=200)
  cmd.add_option('', '--blcoldev', help='Block color deviation threshold. (default: %default)', default=0.2)
- cmd.add_option('', '--blint', help='Block intersection threshold. (default: %default)', default=0.02)
+ cmd.add_option('', '--blint', help='Block intersection threshold. (default: %default)', default=0.2)
  opt, args = cmd.parse_args()
  if not args:
   cmd.print_help()
