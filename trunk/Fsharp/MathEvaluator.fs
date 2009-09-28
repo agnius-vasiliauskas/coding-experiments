@@ -1,9 +1,10 @@
 ﻿(**
-F# script for evaluating math expressions. Not uses abstract syntax tree generation (or F# quotes), 
+F# script for evaluating math expressions. Not uses abstract syntax tree (or F# quotes), 
 nor it uses fsyacc/fslex tools for token parsing. Expression parsing is done in code itself.
 However there are some "limitations" - functions can only be called with tupled parameters 
-(curried style is not allowed).
-Disclaimer - Use at your own risk !!
+(curried style is not allowed). Another drawback is that it is slow - about 150x slower than
+same expression calculated by F# itself. It`s obvious - eval is heavily based on lists manipulation - 
+spliting/joining lists periodically. So - use at your own risk !!
 **)
 
 #light
@@ -14,11 +15,10 @@ let rec exprlst strfrom strto =
     let prefixoperator (x,y) = (x,y) = ("(","-")
     let gluechars (x,y) = 
              (x,y)=("*","*") || (x,y) = ("g","1")  ||
-             (Set.intersect (Set(['a'..'z'] |> List.map (fun k -> k.ToString()))) 
-                           (Set([x;y]))).Count = 2  ||
-             let xnum,ynum = System.Char.IsNumber(x,0),System.Char.IsNumber(y,0) in
+             (int x.[0] >= 97 && int x.[0] <= 122 && int y.[0] >= 97 && int y.[0] <= 122 )  ||
+             let xnum,ynum = int x.[0] >= 48 && int x.[0] <= 57 , int y.[0] >= 48 && int y.[0] <= 57 in
              let xpt,ypt = x=".",y="." in
-             [(xnum,ynum);(xnum,ypt);(xpt,ynum)] |> Seq.exists(fun (a,b) -> (a,b) = (true,true))
+             (xnum,ynum) = (true,true) || (xnum,ypt) = (true,true) || (xpt,ynum) = (true,true)
     match strfrom,strto with
     | hf::tf,[] -> exprlst tf [hf]
     | hf::tf,(ht:string)::tt when gluechars (ht.[ht.Length-1].ToString(),hf) -> exprlst tf ([ht^hf]@tt)
