@@ -2,13 +2,30 @@
 F# script for evaluating math expressions. Not uses abstract syntax tree (or F# quotes), 
 nor it uses fsyacc/fslex tools for token parsing. Expression parsing is done in code itself.
 However there are some "limitations" - functions can only be called with tupled parameters 
-(curried style is not allowed). Another drawback is that it is slow - about 150x slower than
-same expression calculated by F# itself. It`s obvious - eval is heavily based on lists manipulation - 
-spliting/joining lists periodically. So - use at your own risk !!
+(curried style is not allowed). Another drawback is that it is kinda slow. It`s obvious - 
+eval is heavily based on lists manipulation - spliting/joining lists periodically. 
+So - use at your own risk !!
 **)
 
 #light
 #nowarn "20"
+
+open System.Diagnostics;
+
+/// Unary operators
+let unaryop = 
+    let unaryoplst:(string*(float->float))list = 
+        [("abs",abs);("acos",acos);("asin",asin);
+        ("atan",atan);("cos",cos);("cosh",cosh);("exp",exp);("log",log);
+        ("log10",log10);("sign",(fun x -> float (sign x)));("sin",sin);
+        ("sinh",sinh);("sqrt",sqrt);("tan",tan);("tanh",tanh)]
+    unaryoplst |> Map.of_list
+
+/// Binary operators
+let binaryop =
+    let binaryoplst:(string*(float->float->float))list =
+        [("**",( ** ));("*",(*));("/",(/));("+",(+));("-",(-))]
+    binaryoplst |> Map.of_list
 
 /// Group character list into expression list
 let rec exprlst strfrom strto =
@@ -25,21 +42,6 @@ let rec exprlst strfrom strto =
     | hf::tf,ht::tt when prefixoperator (ht,hf) -> exprlst (["0"]@strfrom) (strto)
     | hf::tf,strto -> exprlst tf ([hf]@strto)
     | _ -> strto |> List.rev
-
-/// Unary operators
-let unaryop = 
-    let unaryoplst:(string*(float->float))list = 
-        [("abs",abs);("acos",acos);("asin",asin);
-        ("atan",atan);("cos",cos);("cosh",cosh);("exp",exp);("log",log);
-        ("log10",log10);("sign",(fun x -> float (sign x)));("sin",sin);
-        ("sinh",sinh);("sqrt",sqrt);("tan",tan);("tanh",tanh)]
-    unaryoplst |> Map.of_list
-
-/// Binary operators
-let binaryop =
-    let binaryoplst:(string*(float->float->float))list =
-        [("**",( ** ));("*",(*));("/",(/));("+",(+));("-",(-))]
-    binaryoplst |> Map.of_list
 
 /// Return sub-expression from expression around given operator
 let subexpr ind (elst:(string)list) = 
@@ -68,7 +70,7 @@ let subexpr ind (elst:(string)list) =
 /// Evaluate expression list and return aggregated value
 let rec evallst exlst = 
     let opforeval ex =
-        let binopind (op:string) = ([("**",1);("*",2);("/",2);("+",3);("-",3)] |> Map.of_list).[op]
+        let binopind (op:string) = Map([("**",1);("*",2);("/",2);("+",3);("-",3)]).[op]
         let comparebyprec (x:int*string) (y:int*string) =
             let (i1,op1), (i2,op2) = (x,y)
             let comp = 
@@ -87,7 +89,7 @@ let rec evallst exlst =
     | [] -> exlst
     | [x] when unaryop.ContainsKey (snd x) -> [string(exlst.[2] |> float |> unaryop.[snd x])]
     | [x] when binaryop.ContainsKey (snd x) -> [string(let fil = exlst |> List.filter(fun x -> x<>"(" && x<>")") in 
-                                                (binaryop.[snd x]) (fil.[0] |> float) (fil.[2] |> float))]
+                                                    (binaryop.[snd x]) (fil.[0] |> float) (fil.[2] |> float))]
     | h1::h2::t -> let el,em,er = subexpr (fst h1) exlst in
                    let el,em,er = if (el=[] && er=[]) then subexpr (fst h2) exlst else el,em,er in 
                    evallst (el@(evallst em)@er)
@@ -99,19 +101,38 @@ let eval (expr:string) =
 
 /// Expressions to evaluate for test purposes. Can be changed as required.
 let testEval = 
-        [
-        "1/0";
-        "log(-1)";
-        "5+4";
-        "3*5+14/7";
-        "tanh(96.)+4.45/7.8";
-        "6.+sqrt(7.12)/(1.-exp(6.6))";
-        "14*cos(5)+sin(14)/9";
-        "sqrt(5**log(47))";
-        "5-tanh(2+9)-4*8/(16*sin(5))";
-        "cosh(14*exp(2.6))-15/(log10(4**(8+sin(9*60))))"
-        ]
+    [
+    ("5+4",   fun _ -> 5.+4.);
+    ("3*5+14/7",   fun _ -> 3.*5.+14./7.);
+    ("tanh(96)+4.45/7.8",   fun _ -> tanh(96.)+4.45/7.8);
+    ("6+sqrt(7.12)/(1-exp(6.6))",   fun _ -> 6.+sqrt(7.12)/(1.-exp(6.6)));
+    ("14*cos(5)+sin(14)/9",   fun _ -> 14.*cos(5.)+sin(14.)/9.);
+    ("sqrt(5**log(47))",   fun _ -> sqrt(5.**log(47.)));
+    ("5-tanh(2+9)-4*8/(16*sin(5))",   fun _ -> 5.-tanh(2.+9.)-4.*8./(16.*sin(5.)));
+    ("cosh(14*exp(2.6))-15/(log10(4**(8+sin(9*60))))",   fun _ -> cosh(14.*exp(2.6))-15./(log10(4.**(8.+sin(9.*60.)))))
+    ]
+printfn "%A" "-----------------------------------------"
+printfn "%A" "--- Testing eval function correctness ---"
+printfn "%A" "-----------------------------------------"
 
-testEval |> List.iter (fun x-> printfn "%A" (x^" = "^(eval x).ToString()))
+testEval |> List.iteri (fun i (expr,res)->
+                (i+1).ToString()^". "^(abs(1.-(eval expr)/(res ()))<1e-8).ToString()^" ==> "^ expr^" = "^(res ()).ToString() |> 
+                 printfn "%A")
+
+printfn "%A" "-----------------------------------------"
+printfn "%A" "---    Testing eval function speed    ---"
+printfn "%A" "-----------------------------------------"
+
+testEval |> List.iteri (fun i (expr,res)->
+                        let sw1, sw2 = Stopwatch(), Stopwatch() in
+                        sw1.Start()
+                        let ev = [1..100] |> List.map (fun x -> eval expr)
+                        sw1.Stop()
+                        sw2.Start()
+                        let ca = [1..100] |> List.map (fun x -> res ())
+                        sw2.Stop()
+                        let dif = sw1.ElapsedTicks/sw2.ElapsedTicks in
+                        printfn "%A" ((i+1).ToString()^". Eval slower than plain F# calculation by "^dif.ToString()^"x")
+                      )
 
 System.Console.ReadKey()
