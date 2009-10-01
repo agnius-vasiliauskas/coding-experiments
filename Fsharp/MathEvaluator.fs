@@ -75,7 +75,7 @@ let rec evallst exlst =
             let (i1,op1), (i2,op2) = (x,y)
             let comp = 
                 match () with
-                | _ when (op1 = op2) || (op1.Length > 2 && op2.Length > 2) -> compare i1 i2
+                | _ when (op1.Length > 2 && op2.Length > 2) -> compare i2 i1
                 | _ when (op1.Length > 2) && (not (op2.Length > 2)) -> -1
                 | _ when (not (op1.Length > 2)) && (op2.Length > 2) -> 1
                 | _ -> let rez1 = binopind op1 in let rez2 = binopind op2 in 
