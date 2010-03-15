@@ -83,7 +83,7 @@ def colortopalette(color, palette):
  Convert given color into palette color.
  """
  for a,b in palette:
-  if color >= a and color < b:
+  if color >= a and color <= b:
    return b
 
 def imagetopalette(image, palcolors):
@@ -106,7 +106,10 @@ def getparts(image, block_len):
  for n in range(int(opt.imblev)):
   img = img.filter(ImageFilter.SMOOTH_MORE)
  # Converting image to custom palette
- imagetopalette(img, [x for x in range(256) if x%int(opt.impalred) == 0])
+ pal = [x for x in range(256) if x%int(opt.impalred) == 0]
+ if pal[-1] != 255:
+     pal.append(255)
+ imagetopalette(img, pal)
  pix = img.load()
  
  for x in range(w-block_len):
