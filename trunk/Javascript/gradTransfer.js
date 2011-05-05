@@ -61,10 +61,11 @@ c2 =  document.getElementById("rngAbruptness").value;
 // draw gradient
 for (x = 0; x < width; x++) {
   k = x/width;
+  k = NonLinearTransfer(k,c1,c2);
+  r = Blend(k,scolor[0],tcolor[0]);
+  g = Blend(k,scolor[1],tcolor[1]);
+  b = Blend(k,scolor[2],tcolor[2]);
   for (y = 0; y < height; y++) {
-    r = Blend(NonLinearTransfer(k,c1,c2),scolor[0],tcolor[0]);
-    g = Blend(NonLinearTransfer(k,c1,c2),scolor[1],tcolor[1]);
-    b = Blend(NonLinearTransfer(k,c1,c2),scolor[2],tcolor[2]);
     setPixel(imageData, x, y, r, g, b, 0xff);
   }
 }
