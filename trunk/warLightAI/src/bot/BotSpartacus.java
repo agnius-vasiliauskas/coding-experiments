@@ -302,6 +302,7 @@ public class BotSpartacus implements Bot
             String myPlayer = state.getMyPlayerName();
             String opponentPlayer = state.getOpponentPlayerName();
             ArrayList<Region> searchPath = new ArrayList<>();
+            ArrayList<Region> bestPath = new ArrayList<>();            
             boolean targetFound = false;
             int dephStartIx = 0;
             
@@ -330,7 +331,7 @@ public class BotSpartacus implements Bot
             if (searchPath.isEmpty())
                 return null;
             
-            while (!targetFound && !searchPath.isEmpty()) {
+            while (!searchPath.isEmpty()) {
                 Region lastRegionInList = searchPath.get(searchPath.size() - 1);
                 targetFound = ( 
                               // are we searching for neutrals or enemies ?
@@ -340,8 +341,11 @@ public class BotSpartacus implements Bot
                               // are we searching in same continent ?
                              (!onlyInSameContinent || lastRegionInList.getSuperRegion() == startingRegion.getSuperRegion());  
                 
-                if (targetFound)
-                    return searchPath;
+                if (targetFound) {
+                    if (searchPath.size() < bestPath.size() || bestPath.isEmpty()) {
+                        bestPath = new ArrayList<>(searchPath);
+                    }
+                }
                 
                 // search in deph
                 Region regNext = getNextCandidateInDeph(startingRegion, searchPath, deph, dephStartIx);
@@ -365,7 +369,7 @@ public class BotSpartacus implements Bot
                 
             }
             
-            return searchPath;
+            return bestPath;
         }
 
         private boolean isContinentMine(BotState state, SuperRegion continent) {
