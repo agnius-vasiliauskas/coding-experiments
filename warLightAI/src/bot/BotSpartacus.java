@@ -431,6 +431,24 @@ public class BotSpartacus implements Bot
             return null;
         }
         
+        private Region getTransferTarget(BotState state, Region fromRegion) {
+            
+            Region regTransfer = getRegionFromExistingAttackPath(state, fromRegion);
+            if (regTransfer == null) {
+               ArrayList<Region> attackPath = getNewAttackPathWithStrategy(state, fromRegion);     
+               if (!attackPath.isEmpty()) {
+                   regTransfer = attackPath.get(0);
+                   fromRegion.lastAttackPath = attackPath;
+               }
+            }
+           
+            return regTransfer;
+        }
+        
+        private int getAttackThreshold(BotState state, Region fromRegion) {
+            return (isContinentMine(state, fromRegion.getSuperRegion()))? 4 : 2;
+        }
+        
 	@Override
 	/**
 	 * This method is called for at the second part of each round. This example attacks if a region has
@@ -449,19 +467,10 @@ public class BotSpartacus implements Bot
 			if(fromRegion.ownedByPlayer(myName))
 			{
                                 armiesToPlace = fromRegion.getArmies() - 1;
-                                int attackThreshold = (isContinentMine(state, fromRegion.getSuperRegion()))? 4 : 2;
-                                if (armiesToPlace < attackThreshold)
+                                if (armiesToPlace < getAttackThreshold(state, fromRegion))
                                     continue;
 
-                                Region regTransfer = getRegionFromExistingAttackPath(state, fromRegion);
-                                if (regTransfer == null) {
-                                    ArrayList<Region> attackRegList = getNewAttackPathWithStrategy(state, fromRegion);     
-                                    if (!attackRegList.isEmpty()) {
-                                        regTransfer = attackRegList.get(0);
-                                        fromRegion.lastAttackPath = attackRegList;
-                                    }
-                                }
-
+                                Region regTransfer = getTransferTarget(state, fromRegion);
                                 if (regTransfer != null)
                                     attackTransferMoves.add(new AttackTransferMove(myName, fromRegion, regTransfer, armiesToPlace));
                         }
