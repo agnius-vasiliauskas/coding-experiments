@@ -234,69 +234,11 @@ public class BotSpartacus implements Bot
                 ArrayList<PlaceArmiesMove> placeArmiesMoves = new ArrayList<PlaceArmiesMove>();
                 String myName = state.getMyPlayerName();
                 int armiesLeft = state.getStartingArmies();
-//                int armiesToPlace;
-                
-                // find HQ's in map
-//		if (hqRegions == null) {
-//                    int ix = -1;
-//                    hqRegions = new Region[3];
-//                    
-//                    for (Region reg : state.getVisibleMap().getRegions()) {
-//                        if (ix > 2)
-//                            break;
-//                        if(reg.ownedByPlayer(myName)) {
-//                            ix++;
-//                            hqRegions[ix] = reg;
-//                        }
-//                    }
-//                }
-
-                // relocate HQ in case of some HQ's are occupied by enemy
-//                if (hqRegions != null) {
-//                    if (!hqRegions[0].ownedByPlayer(myName) ||
-//                        !hqRegions[1].ownedByPlayer(myName) ||
-//                        !hqRegions[2].ownedByPlayer(myName)) {
-//                        ArrayList<Region> newHQs = getPreferredRelocatingRegionsForHQ(state, timeOut);
-//
-//                        for (int i = 0; i < 3; i++) {
-//                            Region rCopy;
-//                            try {
-//                                rCopy = newHQs.get(i);                                
-//                            } catch (IndexOutOfBoundsException e) {
-//                                rCopy = newHQs.get(0);
-//                            }
-//
-//                            hqRegions[i] = rCopy;
-//                        }
-//                    }
-//                }
-
-                
-//                // relocate 2 HQ's to allies with targets
-//                if (!regionHaveTargetInNeibhors(state, hqRegions[1])) {
-//                    hqRegions[1] = firstAlliedRegionWithTarget(state, false);   
-//                }
-//                if (!regionHaveTargetInNeibhors(state, hqRegions[2])) {
-//                    hqRegions[2] = firstAlliedRegionWithTarget(state, true);   
-//                }
                 
                 // place armies
                 Region toBase = firstAlliedRegionWithTarget(state);
                 if (toBase != null)
                     placeArmiesMoves.add(new PlaceArmiesMove(myName, toBase, armiesLeft));                
-
-//		while(armiesLeft > 0)
-//		{   
-//                    armiesToPlace = (armiesLeft >= 3)? armiesLeft/3 : 1;
-//                    for (int i = 0; i < 3; i++) {
-//			if(hqRegions[i].ownedByPlayer(myName)) {
-//                            placeArmiesMoves.add(new PlaceArmiesMove(myName, hqRegions[i], armiesToPlace));
-//                            armiesLeft -= armiesToPlace;
-//                            if (armiesLeft <= 0)
-//                                break;
-//                        }
-//                    }
-//		}	
 
 		return placeArmiesMoves;
 	}
@@ -352,18 +294,7 @@ public class BotSpartacus implements Bot
             return null;
         }        
         
-        private ArrayList<Region> getDirectionToTarget(BotState state, Region startingRegion, boolean neutralsFirst, boolean onlyInSameContinent) {
-//            final int dephStep = 5;
-//            int endDeph = 15;            
-//            int startingDeph = 5;
-//            
-//            ArrayList<Region> searchPath = getDirectionToTargetWithDeph(state, startingRegion, neutralsFirst, startingDeph, onlyInSameContinent);
-//            
-//            while (searchPath.isEmpty() && startingDeph < endDeph) {
-//                startingDeph += dephStep;
-//                searchPath = getDirectionToTargetWithDeph(state, startingRegion, neutralsFirst, startingDeph, onlyInSameContinent);
-//            }            
-            
+        private ArrayList<Region> getDirectionToTarget(BotState state, Region startingRegion, boolean neutralsFirst, boolean onlyInSameContinent) {            
             return getDirectionToTargetWithDeph(state, startingRegion, neutralsFirst, 10, onlyInSameContinent); // searchPath;
         }
         
