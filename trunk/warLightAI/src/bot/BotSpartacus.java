@@ -371,23 +371,12 @@ public class BotSpartacus implements Bot
             
             return bestPath;
         }
-
-        private boolean isContinentMine(BotState state, SuperRegion continent) {
-            String myPlayer = state.getMyPlayerName();
-
-            for (Region r : state.getFullMap().getRegions()) {
-                if (r.getSuperRegion() == continent && !r.ownedByPlayer(myPlayer))
-                    return false;
-            }
-            
-            return true;
-        }
         
         private ArrayList<Region> getNewAttackPathWithStrategy(BotState state, Region fromRegion) {
             
             ArrayList<Region> regList = new ArrayList<>();
             
-            if (!isContinentMine(state, fromRegion.getSuperRegion()))
+            if (!BotState.continentBelongsToPlayer(state, fromRegion.getSuperRegion(), state.getMyPlayerName()))
                 regList = getNewAttackPath(state, fromRegion, true); // first we are looking in same continent for targets
             
             if (regList.isEmpty()) 
@@ -446,7 +435,7 @@ public class BotSpartacus implements Bot
         }
         
         private int getAttackThreshold(BotState state, Region fromRegion) {
-            return (isContinentMine(state, fromRegion.getSuperRegion()))? 4 : 2;
+            return (BotState.continentBelongsToPlayer(state, fromRegion.getSuperRegion(), state.getMyPlayerName()))? 4 : 2;
         }
         
 	@Override
