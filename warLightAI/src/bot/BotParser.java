@@ -24,7 +24,7 @@ public class BotParser {
 	
 	final Bot bot;
 	
-	BotState currentState;
+	public BotState currentState;
 	
 	public BotParser(Bot bot)
 	{
@@ -32,7 +32,14 @@ public class BotParser {
 		this.bot = bot;
 		this.currentState = new BotState();
 	}
-	
+
+	public BotParser(Bot bot, String input)
+	{
+		this.scan = new Scanner(input);
+		this.bot = bot;
+		this.currentState = new BotState();
+	}
+        
 	public void run()
 	{
 		while(scan.hasNextLine())
