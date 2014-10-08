@@ -176,7 +176,41 @@ public class BotState {
 		for(Region unknownRegion : unknownRegions)
 			visibleMap.getRegions().remove(unknownRegion);				
 	}
+        
+        private void setActivePlayer(String playerName) {
+            if (getMyPlayerName().equals(playerName))
+                return;
+            
+            setOpponentPlayerName(getMyPlayerName());
+            setMyPlayerName(playerName);
+        }
 
+        private boolean someNeighborsAreMine(Region reg, String playerName) {
+            for (Region r : reg.getNeighbors()) {
+                if (r.ownedByPlayer(playerName))
+                    return true;
+            }
+            return false;
+        }
+        
+	public void updateVisibleMapForUnitTest(String playerName)
+	{
+                setActivePlayer(playerName);
+
+                visibleMap = fullMap.getMapCopy();
+		
+		// remove regions which not belongs to player or player is not in neighbors.
+                ArrayList<Region> removableRegions = new ArrayList<>();
+		for(Region reg : visibleMap.regions) {
+                    if (!reg.ownedByPlayer(playerName) && !someNeighborsAreMine(reg, playerName))
+                        removableRegions.add(reg);
+                }
+                
+                for (Region r : removableRegions)
+                    visibleMap.regions.remove(r);
+				
+	}
+        
 	//Parses a list of the opponent's moves every round. 
 	//Clears it at the start, so only the moves of this round are stored.
 	public void readOpponentMoves(String[] moveInput)
@@ -225,11 +259,23 @@ public class BotState {
 	public String getOpponentPlayerName(){
 		return opponentName;
 	}
+
+	public void setMyPlayerName(String player){
+		myName = player;
+	}
 	
+	public void setOpponentPlayerName(String player){
+		opponentName = player;
+	}        
+        
 	public int getStartingArmies(){
 		return startingArmies;
 	}
-	
+
+	public void setStartingArmies(int armies){
+		startingArmies = armies;
+	}        
+        
 	public int getRoundNumber(){
 		return roundNumber;
 	}
@@ -250,4 +296,14 @@ public class BotState {
 		return pickableStartingRegions;
 	}
 
+        public static boolean continentBelongsToPlayer(BotState state, SuperRegion continent, String playerName) {
+
+            for (Region r : state.getFullMap().getRegions()) {
+                if (r.getSuperRegion() == continent && !r.ownedByPlayer(playerName))
+                    return false;
+            }
+            
+            return true;
+        }        
+        
 }
