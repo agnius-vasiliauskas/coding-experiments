@@ -17,6 +17,8 @@ import move.AttackTransferMove;
 import move.PlaceArmiesMove;
 
 public interface Bot {
+    
+        public int getBotVersion();
 	
 	public ArrayList<Region> getPreferredStartingRegions(BotState state, Long timeOut);
 	

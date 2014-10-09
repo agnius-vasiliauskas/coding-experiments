@@ -31,6 +31,7 @@ import move.PlaceArmiesMove;
 
 public class BotSpartacus implements Bot 
 {
+       public final int botVersion = 35;
     
        private Region[] hqRegions = null;
     
@@ -52,7 +53,12 @@ public class BotSpartacus implements Bot
            
            return r;
        }
-    
+
+        @Override
+        public int getBotVersion() {
+            return botVersion;
+        }
+       
 	@Override
 	/**
 	 * A method used at the start of the game to decide which player start with what Regions. 6 Regions are required to be returned.

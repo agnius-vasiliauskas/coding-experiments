@@ -8,6 +8,7 @@ package simulator;
 import bot.*;
 import java.util.*;
 import main.*;
+import move.*;
 
 /**
  *
@@ -19,6 +20,8 @@ public class Simulator {
     private BotState state;
     public Bot myBot;
     public Bot opponentBot;
+    private Bot playingBot;
+    private Random rnd;
     final String initSettings = "settings your_bot player1\n" +
                                 "\n" +
                                 "settings opponent_bot player2\n" +
@@ -31,13 +34,26 @@ public class Simulator {
                                 "\n" +
                                 "pick_starting_regions 10000 6 4 12 13 19 16 22 23 34 32 41 39"
                                 ;
-    
-    public Simulator() {
+
+    public enum MyGameOutcome {
+        WIN,
+        LOSE,
+        DRAW,
+        UNDEFINED
+    }
+
+    private void initializeGameSettings() {
+        rnd = new Random();
         myBot = new BotSpartacus();
-        opponentBot = new BotSpartacus();
+        opponentBot = new oldBot();
+        playingBot = myBot;
         parser = new BotParser(myBot, initSettings);
         parser.run();
         state = parser.currentState;
+    }
+    
+    public Simulator() {
+        initializeGameSettings();
     }
     
     private boolean continentRegionsHaveNeighbors(SuperRegion continent) {
@@ -115,58 +131,217 @@ public class Simulator {
         
         return "";
     }
+
+    public void setActivePlayer(String playerName) {
+        playingBot = (playerName.equals("player1"))? myBot : opponentBot;
+
+        if (state.getMyPlayerName().equals(playerName))
+            return;
+
+        state.setOpponentPlayerName(state.getMyPlayerName());
+        state.setMyPlayerName(playerName);
+    }    
     
-    private int getArmiesPerTurnAmount(String playerName) {
-        int total = 5;
+    private int placeArmiesForPlayer(PlaceArmiesMove placeArmiesMove, int armiesPerRound) {
+        Region visibleMapRegion = placeArmiesMove.getRegion();
         
-        for (SuperRegion continent : state.getFullMap().getSuperRegions()) {
-            if (BotState.continentBelongsToPlayer(state, continent, playerName))
-                total += continent.getArmiesReward();
+        if (visibleMapRegion.ownedByPlayer(placeArmiesMove.getPlayerName())) {
+            if (placeArmiesMove.getArmies() <= armiesPerRound) {
+                Region fullMapRegion = state.getFullMap().getRegion(visibleMapRegion.getId());
+                int newArmiesCount = visibleMapRegion.getArmies() + placeArmiesMove.getArmies();
+                fullMapRegion.setArmies(newArmiesCount);
+                visibleMapRegion.setArmies(newArmiesCount);
+                return placeArmiesMove.getArmies();
+            }
+        }        
+        return 0;
+    }
+
+    private void placeArmiesForPlayerTransfer(AttackTransferMove placeArmiesMove) {
+        Region toVisibleMapRegion = placeArmiesMove.getToRegion();
+        Region fromVisibleMapRegion = placeArmiesMove.getFromRegion();        
+
+        if (!fromVisibleMapRegion.ownedByPlayer(placeArmiesMove.getPlayerName()))
+            return;
+        
+        if (!toVisibleMapRegion.ownedByPlayer(placeArmiesMove.getPlayerName()))
+            return;
+        
+        Region toFullMapRegion = state.getFullMap().getRegion(toVisibleMapRegion.getId());
+        Region fromFullMapRegion = state.getFullMap().getRegion(fromVisibleMapRegion.getId());
+
+        int toArmiesCount = toVisibleMapRegion.getArmies() + placeArmiesMove.getArmies();
+        int fromArmiesCount = fromVisibleMapRegion.getArmies() - placeArmiesMove.getArmies();
+        if (fromArmiesCount < 1)
+            return;
+
+        toFullMapRegion.setArmies(toArmiesCount);
+        toVisibleMapRegion.setArmies(toArmiesCount);
+
+        fromFullMapRegion.setArmies(fromArmiesCount);
+        fromVisibleMapRegion.setArmies(fromArmiesCount);            
+    }    
+
+    private void placeArmiesForPlayerAttack(AttackTransferMove placeArmiesMove) {
+        Region toVisibleMapRegion = placeArmiesMove.getToRegion();
+        Region fromVisibleMapRegion = placeArmiesMove.getFromRegion();        
+
+        if (!fromVisibleMapRegion.ownedByPlayer(placeArmiesMove.getPlayerName()))
+            return;
+        
+        if (toVisibleMapRegion.ownedByPlayer(placeArmiesMove.getPlayerName()))
+            return;
+        
+        Region toFullMapRegion = state.getFullMap().getRegion(toVisibleMapRegion.getId());
+        Region fromFullMapRegion = state.getFullMap().getRegion(fromVisibleMapRegion.getId());
+
+        // updating from region
+        int fromArmiesCount = fromVisibleMapRegion.getArmies() - placeArmiesMove.getArmies();
+        if (fromArmiesCount < 1)
+            return;
+        else {
+            fromFullMapRegion.setArmies(fromArmiesCount);
+            fromVisibleMapRegion.setArmies(fromArmiesCount);                        
         }
+
+        // updating to region
+        int attackingArmies = placeArmiesMove.getArmies();
+        int defendingArmies = toVisibleMapRegion.getArmies();
         
-        return total;
+        // attack
+        while (true) {
+            if (defendingArmies == 0 || attackingArmies == 0)
+                break;
+            defendingArmies -= (rnd.nextInt(101) <= 60)? 1 : 0;
+            attackingArmies -= (rnd.nextInt(101) <= 70)? 1 : 0;
+        }
+
+        // attack outcome
+        if (defendingArmies > 0 && attackingArmies == 0) {
+            toFullMapRegion.setArmies(defendingArmies);
+            toVisibleMapRegion.setArmies(defendingArmies);            
+        }
+        if (defendingArmies == 0 && attackingArmies > 0) {
+            toFullMapRegion.setArmies(attackingArmies);
+            toVisibleMapRegion.setArmies(attackingArmies);
+            toFullMapRegion.setPlayerName(placeArmiesMove.getPlayerName());
+            toVisibleMapRegion.setPlayerName(placeArmiesMove.getPlayerName());            
+        }
+        if (defendingArmies == 0 && attackingArmies == 0) {
+            toFullMapRegion.setArmies(1);
+            toVisibleMapRegion.setArmies(1);
+            toFullMapRegion.setPlayerName("neutral");
+            toVisibleMapRegion.setPlayerName("neutral");            
+        }
+
+    }        
+
+    private void performPlayerPlaceArmies(int armiesPerRound) {
+        ArrayList<PlaceArmiesMove> placeArmiesMoves = playingBot.getPlaceArmiesMoves(state, TIMEOUT);
+        for (PlaceArmiesMove placeArmiesMove : placeArmiesMoves) {
+            if (armiesPerRound <= 0)
+                break;
+            armiesPerRound -= placeArmiesForPlayer(placeArmiesMove, armiesPerRound);
+        }
     }
     
-    private String simulateTestGame() {
+    private void performPlayerTransferArmies() {
+        ArrayList<AttackTransferMove> transferMoves = playingBot.getAttackTransferMoves(state, TIMEOUT);
+        for (AttackTransferMove transferMove : transferMoves) {
+            if (transferMove.getToRegion().ownedByPlayer(transferMove.getPlayerName()))
+                placeArmiesForPlayerTransfer(transferMove);
+            else
+                placeArmiesForPlayerAttack(transferMove);
+        }        
+    }
+    
+    private MyGameOutcome calculateGameOutcome(BotState state, String myPlayerName, String opponentPlayerName) {
+        int myRegions = 0;
+        int enemyRegions = 0;
+
+        for (Region r : state.getFullMap().getRegions()) {
+            if (r.ownedByPlayer(myPlayerName))
+                myRegions++;
+            if (r.ownedByPlayer(opponentPlayerName))
+                enemyRegions++;
+        }
+        
+        if (myRegions > 0 && enemyRegions == 0)
+            return MyGameOutcome.WIN;
+        if (myRegions == 0 && enemyRegions > 0)
+            return MyGameOutcome.LOSE;
+        if (myRegions > 0 && enemyRegions > 0)
+            return MyGameOutcome.DRAW;
+        
+        return MyGameOutcome.UNDEFINED;
+    }
+    
+    private MyGameOutcome simulateTestGame() {
         final int TOTAL_ROUNDS = 100;
         final int NUMBER_OF_PLAYERS = 2;
-        final String[] playerNames = {"player1", "player2"};
-        int armiesPerRound;
+        final String[] playerNames = {"player1", "player2"};  // first player is mine
         
         for (int i = 0; i < TOTAL_ROUNDS; i++) {
             
             for (int j = 0; j < NUMBER_OF_PLAYERS; j++) {
+                setActivePlayer(playerNames[j]);
 
-                // update fog of war
-                state.updateVisibleMapForUnitTest(playerNames[j]);
+                state.updateFogOfWar(playerNames[j]);
                 
-                // calculate and set armies per turn amount
-                armiesPerRound = getArmiesPerTurnAmount(playerNames[j]);
-                if (armiesPerRound < 5)
-                    return String.format("Player %s has less armies than 5 in round %d", playerNames[j], i+1);
-                else
-                    state.setStartingArmies(armiesPerRound);
-
+                state.initializeArmiesPerTurnAmount(playerNames[j]);
+                
+                performPlayerPlaceArmies(state.getStartingArmies());
+                
+                performPlayerTransferArmies();
             }
             
         }
         
-        return "";
+        return calculateGameOutcome(state, playerNames[0], playerNames[1]);
+    }
+    
+    private int calculateBotImprovement() {
+        int myWinProbability = 0;
+        int opponentWinProbability = 0;
+        final int TOTAL_GAMES = 100;
+
+        // return less than -1000 for errors
+        
+        for (int i = 0; i < TOTAL_GAMES; i++) {
+            initializeGameSettings();
+            
+            if (checkMapSetupForTest().length() != 0 )
+                return -1001;
+
+            if (setInitialRegionsForPlayers().length() != 0)
+                return -1002;
+
+            MyGameOutcome outcome = simulateTestGame();            
+            if (outcome == MyGameOutcome.WIN)
+                myWinProbability++;
+            if (outcome == MyGameOutcome.LOSE)
+                opponentWinProbability++;
+        }
+        
+        myWinProbability = (int)(100.0 * ((double)myWinProbability / (double)TOTAL_GAMES));
+        opponentWinProbability = (int)(100.0 * ((double)opponentWinProbability / (double)TOTAL_GAMES));
+        
+        return myWinProbability - opponentWinProbability;
     }
     
     public String getSimulatedGameFailMessage() {
-        String error = "";
-        
-        if ((error = checkMapSetupForTest()).length() != 0 )
-            return error;
-        
-        if ((error = setInitialRegionsForPlayers()).length() != 0)
-            return error;
+        if (myBot.getBotVersion() <= opponentBot.getBotVersion())
+            return String.format("New bot version is not greater than old bot version (%d,%d)", myBot.getBotVersion(), opponentBot.getBotVersion());
 
-        if ((error = simulateTestGame()).length() != 0)
-            return error;        
+        int botImprovement = calculateBotImprovement();
         
-        return error;
+        if (botImprovement < -1000)
+            return String.format("Some game failed with specific error (error no = %d)", botImprovement);
+        
+        if (botImprovement <= 0)
+            return String.format("New bot version don't have non-negative improvement ! (improvement = %d%%)", botImprovement);
+        
+        return "";
     }
     
 }
