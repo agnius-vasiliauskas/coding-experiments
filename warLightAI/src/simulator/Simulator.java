@@ -300,10 +300,10 @@ public class Simulator {
         return calculateGameOutcome(state, playerNames[0], playerNames[1]);
     }
     
-    private int calculateBotImprovement() {
-        int myWinProbability = 0;
-        int opponentWinProbability = 0;
-        final int TOTAL_GAMES = 100;
+    private double calculateBotImprovement() {
+        double myWinProbability = 0.0;
+        double opponentWinProbability = 0.0;
+        final int TOTAL_GAMES = 2000;
 
         // return less than -1000 for errors
         
@@ -311,20 +311,20 @@ public class Simulator {
             initializeGameSettings();
             
             if (checkMapSetupForTest().length() != 0 )
-                return -1001;
+                return -1001.0;
 
             if (setInitialRegionsForPlayers().length() != 0)
-                return -1002;
+                return -1002.0;
 
             MyGameOutcome outcome = simulateTestGame();            
             if (outcome == MyGameOutcome.WIN)
-                myWinProbability++;
+                myWinProbability += 1.0;
             if (outcome == MyGameOutcome.LOSE)
-                opponentWinProbability++;
+                opponentWinProbability += 1.0;
         }
         
-        myWinProbability = (int)(100.0 * ((double)myWinProbability / (double)TOTAL_GAMES));
-        opponentWinProbability = (int)(100.0 * ((double)opponentWinProbability / (double)TOTAL_GAMES));
+        myWinProbability = 100.0 * (myWinProbability / (double)TOTAL_GAMES);
+        opponentWinProbability = 100.0 * (opponentWinProbability / (double)TOTAL_GAMES);
         
         return myWinProbability - opponentWinProbability;
     }
@@ -333,13 +333,13 @@ public class Simulator {
         if (myBot.getBotVersion() <= opponentBot.getBotVersion())
             return String.format("New bot version is not greater than old bot version (%d,%d)", myBot.getBotVersion(), opponentBot.getBotVersion());
 
-        int botImprovement = calculateBotImprovement();
+        double botImprovement = calculateBotImprovement();
         
-        if (botImprovement < -1000)
-            return String.format("Some game failed with specific error (error no = %d)", botImprovement);
+        if (botImprovement < -1000.0)
+            return String.format("Some game failed with specific error (error no = %f)", botImprovement);
         
-        if (botImprovement <= 0)
-            return String.format("New bot version don't have non-negative improvement ! (improvement = %d%%)", botImprovement);
+        if (botImprovement <= 0.0)
+            return String.format("New bot version don't have non-negative improvement ! (improvement = %f%%)", botImprovement);
         
         return "";
     }
