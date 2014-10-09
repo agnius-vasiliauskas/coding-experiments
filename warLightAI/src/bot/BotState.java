@@ -176,14 +176,6 @@ public class BotState {
 		for(Region unknownRegion : unknownRegions)
 			visibleMap.getRegions().remove(unknownRegion);				
 	}
-        
-        private void setActivePlayer(String playerName) {
-            if (getMyPlayerName().equals(playerName))
-                return;
-            
-            setOpponentPlayerName(getMyPlayerName());
-            setMyPlayerName(playerName);
-        }
 
         private boolean someNeighborsAreMine(Region reg, String playerName) {
             for (Region r : reg.getNeighbors()) {
@@ -192,11 +184,22 @@ public class BotState {
             }
             return false;
         }
-        
-	public void updateVisibleMapForUnitTest(String playerName)
-	{
-                setActivePlayer(playerName);
 
+        public void initializeArmiesPerTurnAmount(String playerName) {
+            int total = 5;
+
+            for (SuperRegion continent : this.getFullMap().getSuperRegions()) {
+                if (BotState.continentBelongsToPlayer(this, continent, playerName))
+                    total += continent.getArmiesReward();
+            }
+
+            if (total >= 5)
+                this.setStartingArmies(total);
+            
+        }        
+        
+	public void updateFogOfWar(String playerName)
+	{
                 visibleMap = fullMap.getMapCopy();
 		
 		// remove regions which not belongs to player or player is not in neighbors.
