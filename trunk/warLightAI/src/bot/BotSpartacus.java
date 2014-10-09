@@ -222,7 +222,7 @@ public class BotSpartacus implements Bot
         }
         
         private Region firstAlliedRegionWithTarget(BotState state) {
-            SuperRegion targetContinent = getContinentWithSmalestAmountOfEnemyArmies(state);
+            SuperRegion targetContinent = getContinentWithSmalestAmountOfEnemyCountries(state);
             Region placeArmiesRegion = firstRegionWithLowestAmountOfArmiesInNeighbors(state, targetContinent);        
             
             return placeArmiesRegion;
