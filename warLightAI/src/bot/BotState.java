@@ -36,12 +36,17 @@ public class BotState {
 	private int startingArmies; //number of armies the player can place on map
 	
 	private int roundNumber;
-	
+        
+        public int timesCountryCaptureForMyBot;
+        public int timesCountryCaptureForOpponentBot;
+        
 	public BotState()
 	{
 		pickableStartingRegions = new ArrayList<Region>();
 		opponentMoves = new ArrayList<Move>();
 		roundNumber = 0;
+                timesCountryCaptureForMyBot = 0;
+                timesCountryCaptureForOpponentBot = 0;
 	}
 
         public static void checkTimings(LinkedList<Long> times, Long timeOut) {

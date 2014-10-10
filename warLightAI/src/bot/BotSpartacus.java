@@ -31,7 +31,7 @@ import move.PlaceArmiesMove;
 
 public class BotSpartacus implements Bot 
 {
-       public final int botVersion = 35;
+       public final int botVersion = 36;
     
        private Region[] hqRegions = null;
     
