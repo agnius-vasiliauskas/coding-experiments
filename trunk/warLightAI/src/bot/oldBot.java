@@ -31,7 +31,7 @@ import move.PlaceArmiesMove;
 
 public class oldBot implements Bot 
 {
-       public final int botVersion = 34;
+       public final int botVersion = 35;
     
        private Region[] hqRegions = null;
     

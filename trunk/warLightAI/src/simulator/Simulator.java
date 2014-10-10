@@ -224,12 +224,20 @@ public class Simulator {
         if (defendingArmies == 0 && attackingArmies > 0) {
             toFullMapRegion.setArmies(attackingArmies);
             toVisibleMapRegion.setArmies(attackingArmies);
+            
             toFullMapRegion.setPlayerName(placeArmiesMove.getPlayerName());
             toVisibleMapRegion.setPlayerName(placeArmiesMove.getPlayerName());            
+            
+            if (placeArmiesMove.getPlayerName().equals("player1"))
+                state.timesCountryCaptureForMyBot++;
+            if (placeArmiesMove.getPlayerName().equals("player2"))
+                state.timesCountryCaptureForOpponentBot++;
+            
         }
         if (defendingArmies == 0 && attackingArmies == 0) {
             toFullMapRegion.setArmies(1);
             toVisibleMapRegion.setArmies(1);
+            
             toFullMapRegion.setPlayerName("neutral");
             toVisibleMapRegion.setPlayerName("neutral");            
         }
@@ -303,6 +311,7 @@ public class Simulator {
     private double calculateBotImprovement() {
         double myWinProbability = 0.0;
         double opponentWinProbability = 0.0;
+        double myCaptures = 0.0, opponentCaptures = 0.0;
         final int TOTAL_GAMES = 2000;
 
         // return less than -1000 for errors
@@ -321,12 +330,24 @@ public class Simulator {
                 myWinProbability += 1.0;
             if (outcome == MyGameOutcome.LOSE)
                 opponentWinProbability += 1.0;
+            
+            myCaptures += (double)state.timesCountryCaptureForMyBot;
+            opponentCaptures += (double)state.timesCountryCaptureForOpponentBot;
         }
         
-        myWinProbability = 100.0 * (myWinProbability / (double)TOTAL_GAMES);
-        opponentWinProbability = 100.0 * (opponentWinProbability / (double)TOTAL_GAMES);
+        myWinProbability = myWinProbability / (double)TOTAL_GAMES;
+        opponentWinProbability = opponentWinProbability / (double)TOTAL_GAMES;
+        double winImprovement = 100.0 * ( myWinProbability - opponentWinProbability);
+        double capturesTotal = myCaptures + opponentCaptures;
+        double captureImprovement = 100.0 * ((myCaptures/capturesTotal) - (opponentCaptures/capturesTotal));
+
+        System.out.printf("Win rate impovement %6.2f%%\n", winImprovement);
+        System.out.printf("Country capture rate impovement %6.2f%%\n", captureImprovement);
         
-        return myWinProbability - opponentWinProbability;
+        if (winImprovement > 0.0)
+            return winImprovement;
+        else
+            return captureImprovement;
     }
     
     public String getSimulatedGameFailMessage() {
