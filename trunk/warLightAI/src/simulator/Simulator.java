@@ -351,6 +351,8 @@ public class Simulator {
     }
     
     public String getSimulatedGameFailMessage() {
+        final double improvementTolerance = 0.01;
+        
         if (myBot.getBotVersion() <= opponentBot.getBotVersion())
             return String.format("New bot version is not greater than old bot version (%d,%d)", myBot.getBotVersion(), opponentBot.getBotVersion());
 
@@ -359,7 +361,7 @@ public class Simulator {
         if (botImprovement < -1000.0)
             return String.format("Some game failed with specific error (error no = %f)", botImprovement);
         
-        if (botImprovement <= 0.0)
+        if (botImprovement < improvementTolerance)
             return String.format("New bot version don't have non-negative improvement ! (improvement = %f%%)", botImprovement);
         
         return "";
