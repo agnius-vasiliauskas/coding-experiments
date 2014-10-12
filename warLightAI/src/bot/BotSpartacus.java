@@ -31,7 +31,7 @@ import move.PlaceArmiesMove;
 
 public class BotSpartacus implements Bot 
 {
-       public final int botVersion = 36;
+       public final int botVersion = 37;
     
        private Region[] hqRegions = null;
     
@@ -67,16 +67,21 @@ public class BotSpartacus implements Bot
 	 */
 	public ArrayList<Region> getPreferredStartingRegions(BotState state, Long timeOut)
 	{
-		final int m = 6;
+		final int REGION_AMOUNT = 6;
 		ArrayList<Region> preferredStartingRegions = new ArrayList<Region>();
-                LinkedList<SuperRegion> continents = state.getFullMap().getSuperRegions();
+                SuperRegion continent = getContinentWithSmalestAmountOfEnemyCountries(state, REGION_AMOUNT, false);
+
+                Region region = getRegionWithLowestNeighborsAmount(state, preferredStartingRegions, false, continent);
+                preferredStartingRegions.add(region);
                 
-		for(int i=0; i<m; i++)
-		{
-			Region region = getRegionWithLowestNeighborsAmount(state, preferredStartingRegions, false, continents.get(i));
-			if(!preferredStartingRegions.contains(region))
-				preferredStartingRegions.add(region);
-		}
+                int sIx = 0;
+                while (preferredStartingRegions.size() != 6) {
+                    for (Region reg : preferredStartingRegions.get(sIx).getNeighbors()) {
+                        if (reg.getSuperRegion() == continent && !preferredStartingRegions.contains(reg))
+                            preferredStartingRegions.add(reg);
+                    }
+                    sIx++;
+                }
 		
 		return preferredStartingRegions;
 	}
@@ -171,16 +176,16 @@ public class BotSpartacus implements Bot
             return continentFound;
         }        
         
-        private SuperRegion getContinentWithSmalestAmountOfEnemyCountries(BotState state) {
+        private SuperRegion getContinentWithSmalestAmountOfEnemyCountries(BotState state, int lowerBound, boolean onlyContinentsWithMyRegionsInside) {
             String myName = state.getMyPlayerName();
-            ArrayList<SuperRegion> myContinents = getContinentsUsed(state);
+            ArrayList<SuperRegion> myContinents = (onlyContinentsWithMyRegionsInside)? getContinentsUsed(state) : new ArrayList<>(state.getFullMap().getSuperRegions());
             SuperRegion continentFound = null;
             int enemyCountriesCount;
             int enemyCountriesCountMin = Integer.MAX_VALUE;
 
             for (SuperRegion myContinent : myContinents) {
                 enemyCountriesCount = numberOfEnemyCountriesInSuperregion(state, myContinent);
-                if (enemyCountriesCount < enemyCountriesCountMin && enemyCountriesCount > 0) {
+                if (enemyCountriesCount < enemyCountriesCountMin && enemyCountriesCount >= lowerBound) {
                     enemyCountriesCountMin = enemyCountriesCount;
                     continentFound = myContinent;
                 }
@@ -222,7 +227,7 @@ public class BotSpartacus implements Bot
         }
         
         private Region firstAlliedRegionWithTarget(BotState state) {
-            SuperRegion targetContinent = getContinentWithSmalestAmountOfEnemyCountries(state);
+            SuperRegion targetContinent = getContinentWithSmalestAmountOfEnemyCountries(state, 1, true);
             Region placeArmiesRegion = firstRegionWithLowestAmountOfArmiesInNeighbors(state, targetContinent);        
             
             return placeArmiesRegion;
@@ -300,17 +305,25 @@ public class BotSpartacus implements Bot
             return null;
         }        
         
-        private ArrayList<Region> getDirectionToTarget(BotState state, Region startingRegion, boolean neutralsFirst, boolean onlyInSameContinent) {            
-            return getDirectionToTargetWithDeph(state, startingRegion, neutralsFirst, 10, onlyInSameContinent); // searchPath;
+        private ArrayList<Region> getDirectionToTarget(BotState state, Region startingRegion, boolean neutralsFirst, boolean onlyInSameContinent, boolean firstFrontLine) {            
+            return getDirectionToTargetWithDeph(state, startingRegion, neutralsFirst, 10, onlyInSameContinent, firstFrontLine); // searchPath;
         }
         
-        private ArrayList<Region> getDirectionToTargetWithDeph(BotState state, Region startingRegion, boolean neutralsFirst, int deph, boolean onlyInSameContinent) {
+        private ArrayList<Region> getDirectionToTargetWithDeph(BotState state, Region startingRegion, boolean neutralsFirst, int deph, boolean onlyInSameContinent, boolean firstFrontLine) {
             String myPlayer = state.getMyPlayerName();
             String opponentPlayer = state.getOpponentPlayerName();
             ArrayList<Region> searchPath = new ArrayList<>();
             ArrayList<Region> bestPath = new ArrayList<>();            
             boolean targetFound = false;
             int dephStartIx = 0;
+            Region targetFromFirstFrontLine = null;
+            
+            if (!firstFrontLine) {
+                if (startingRegion.lastAttackPath1 == null || startingRegion.lastAttackPath1.isEmpty())
+                    return bestPath;
+                else
+                    targetFromFirstFrontLine = startingRegion.lastAttackPath1.get(startingRegion.lastAttackPath1.size() - 1);
+            }
             
             // direct search for nearest enemy with lowest amount of armies
             Region regNearestEnemy = null;
@@ -318,7 +331,9 @@ public class BotSpartacus implements Bot
 
             for (Region r : startingRegion.getNeighbors()) {
                 targetFound = !r.ownedByPlayer(myPlayer) && 
-                             (!onlyInSameContinent || r.getSuperRegion() == startingRegion.getSuperRegion());                  
+                             (!onlyInSameContinent || r.getSuperRegion() == startingRegion.getSuperRegion()) &&
+                             (firstFrontLine || r != targetFromFirstFrontLine);   
+                
                 if (targetFound) {
                     if (r.getArmies() < enemyArmies) {
                         enemyArmies = r.getArmies();
@@ -345,7 +360,9 @@ public class BotSpartacus implements Bot
                              (!neutralsFirst && lastRegionInList.ownedByPlayer(opponentPlayer))
                               ) &&   
                               // are we searching in same continent ?
-                             (!onlyInSameContinent || lastRegionInList.getSuperRegion() == startingRegion.getSuperRegion());  
+                             (!onlyInSameContinent || lastRegionInList.getSuperRegion() == startingRegion.getSuperRegion()) &&
+                              // are we starting second front line or using first one
+                             (firstFrontLine || lastRegionInList != targetFromFirstFrontLine);  
                 
                 if (targetFound) {
                     if (searchPath.size() < bestPath.size() || bestPath.isEmpty()) {
@@ -378,24 +395,24 @@ public class BotSpartacus implements Bot
             return bestPath;
         }
         
-        private ArrayList<Region> getNewAttackPathWithStrategy(BotState state, Region fromRegion) {
+        private ArrayList<Region> getNewAttackPathWithStrategy(BotState state, Region fromRegion, boolean firstFrontLine) {
             
             ArrayList<Region> regList = new ArrayList<>();
             
             if (!BotState.continentBelongsToPlayer(state, fromRegion.getSuperRegion(), state.getMyPlayerName()))
-                regList = getNewAttackPath(state, fromRegion, true); // first we are looking in same continent for targets
+                regList = getNewAttackPath(state, fromRegion, true, firstFrontLine); // first we are looking in same continent for targets
             
             if (regList.isEmpty()) 
-                regList = getNewAttackPath(state, fromRegion, false); // trying to find targets in any continent            
+                regList = getNewAttackPath(state, fromRegion, false, firstFrontLine); // trying to find targets in any continent            
 
             return regList;
         }        
         
-        private ArrayList<Region> getNewAttackPath(BotState state, Region fromRegion, boolean onlyInSameContinent) {
+        private ArrayList<Region> getNewAttackPath(BotState state, Region fromRegion, boolean onlyInSameContinent, boolean firstFrontLine) {
             
-            ArrayList<Region> regList = getDirectionToTarget(state, fromRegion, true, onlyInSameContinent); // neutrals first
+            ArrayList<Region> regList = getDirectionToTarget(state, fromRegion, true, onlyInSameContinent, firstFrontLine); // neutrals first
             if (regList.isEmpty()) 
-                regList = getDirectionToTarget(state, fromRegion, false, onlyInSameContinent); // enemies second            
+                regList = getDirectionToTarget(state, fromRegion, false, onlyInSameContinent, firstFrontLine); // enemies second            
 
             return regList;
         }
@@ -405,19 +422,33 @@ public class BotSpartacus implements Bot
             
             for (Region region : state.getVisibleMap().getRegions()) {
                 if (region.ownedByPlayer(myName)) {
-                    region.lastAttackPath = null;
+                    region.lastAttackPath1 = null;
+                    region.lastAttackPath2 = null;                    
                 }
             }
         }
         
-        private Region getRegionFromExistingAttackPath(BotState state, Region fromRegion) {
+        private Region getRegionFromExistingAttackPath(BotState state, Region fromRegion, boolean firstFrontLine) {
             String myName = state.getMyPlayerName();
             
             for (Region reg : state.getVisibleMap().getRegions()) {
-                if (reg != fromRegion && reg.ownedByPlayer(myName) && reg.lastAttackPath != null && !reg.lastAttackPath.isEmpty()) {
-                    for (int i = 0; i < reg.lastAttackPath.size() - 1; i++) {
-                        if (reg.lastAttackPath.get(i) == fromRegion) {
-                            return reg.lastAttackPath.get(i+1);
+//                ArrayList<Region> attackPath = (firstFrontLine)? reg.lastAttackPath1 : reg.lastAttackPath2;
+                if (reg != fromRegion && reg.ownedByPlayer(myName) 
+//                        && attackPath != null && !attackPath.isEmpty()
+                    ) {
+//                    for (int i = 0; i < attackPath.size() - 1; i++) {
+//                        if (attackPath.get(i) == fromRegion) {
+//                            return attackPath.get(i+1);
+//                        }
+//                    }
+                    for (int i = 0; reg.lastAttackPath1 != null && i < reg.lastAttackPath1.size() - 1; i++) {
+                        if (reg.lastAttackPath1.get(i) == fromRegion) {
+                            return reg.lastAttackPath1.get(i+1);
+                        }
+                    }
+                    for (int i = 0; reg.lastAttackPath2 != null && i < reg.lastAttackPath2.size() - 1; i++) {
+                        if (reg.lastAttackPath2.get(i) == fromRegion) {
+                            return reg.lastAttackPath2.get(i+1);
                         }
                     }
                 }
@@ -426,22 +457,64 @@ public class BotSpartacus implements Bot
             return null;
         }
         
-        private Region getTransferTarget(BotState state, Region fromRegion) {
+        private Region getTransferTarget(BotState state, Region fromRegion, boolean firstFrontLine) {
             
-            Region regTransfer = getRegionFromExistingAttackPath(state, fromRegion);
+            Region regTransfer = getRegionFromExistingAttackPath(state, fromRegion, firstFrontLine);
             if (regTransfer == null) {
-               ArrayList<Region> attackPath = getNewAttackPathWithStrategy(state, fromRegion);     
+               ArrayList<Region> attackPath = getNewAttackPathWithStrategy(state, fromRegion, firstFrontLine);     
                if (!attackPath.isEmpty()) {
                    regTransfer = attackPath.get(0);
-                   fromRegion.lastAttackPath = attackPath;
+                   if (firstFrontLine)
+                       fromRegion.lastAttackPath1 = attackPath;
+                   else
+                       fromRegion.lastAttackPath2 = attackPath;
                }
             }
            
             return regTransfer;
         }
         
-        private int getAttackThreshold(BotState state, Region fromRegion) {
-            return (BotState.continentBelongsToPlayer(state, fromRegion.getSuperRegion(), state.getMyPlayerName()))? 4 : 2;
+        private int getAttackThreshold(BotState state, Region fromRegion, boolean forOneFrontline) {
+            if (forOneFrontline)
+                return (BotState.continentBelongsToPlayer(state, fromRegion.getSuperRegion(), state.getMyPlayerName()))? 4 : 2;
+            else
+                return 6;
+        }
+
+        private void openFrontLine(BotState state , Region fromRegion, ArrayList<AttackTransferMove> attackTransferMoves, int armiesToPlace, boolean firstFrontLine) {
+            String myName = state.getMyPlayerName();
+            Region regTransfer = getTransferTarget(state, fromRegion, firstFrontLine);
+            if (regTransfer != null)
+                attackTransferMoves.add(new AttackTransferMove(myName, fromRegion, regTransfer, armiesToPlace));
+        }
+
+        private Region getMyRegionWithBiggestArmy(BotState state, ArrayList<Region> exceptions) {
+            String myName = state.getMyPlayerName();   
+            int armies = 0;
+            Region reg = null;
+            
+            for (Region r : state.getVisibleMap().getRegions()) {
+                if (r.ownedByPlayer(myName) && r.getArmies() > armies && !exceptions.contains(r)) {
+                    armies = r.getArmies();
+                    reg = r;
+                }
+            }
+            
+            return reg;
+        }
+        
+        private ArrayList<Region> getMyRegionsWithGreatestArmies(BotState state, int maxNumOfRegions) {
+            ArrayList<Region> regionsFound = new ArrayList<>();
+            
+            for (int i = 0; i < maxNumOfRegions; i++) {
+                Region reg = getMyRegionWithBiggestArmy(state, regionsFound);
+                if (reg == null)
+                    break;
+                else
+                    regionsFound.add(reg);
+            }
+            
+            return regionsFound;
         }
         
 	@Override
@@ -454,22 +527,44 @@ public class BotSpartacus implements Bot
 	{
 		ArrayList<AttackTransferMove> attackTransferMoves = new ArrayList<AttackTransferMove>();
 		String myName = state.getMyPlayerName();
-		int armiesToPlace;
-		
+		int armiesToPlaceTotal;
+		int armiesToPlaceFrontLine;                
+                long time = System.currentTimeMillis();
+                boolean isContinentMine;
+                int searchedForFrontLines = 0;
+                int MAX_FRONT_LINES = 3;
+                
                 clearAllAttackPathsForMyRegions(state);
-		for(Region fromRegion : state.getVisibleMap().getRegions())
-		{
-			if(fromRegion.ownedByPlayer(myName))
-			{
-                                armiesToPlace = fromRegion.getArmies() - 1;
-                                if (armiesToPlace < getAttackThreshold(state, fromRegion))
-                                    continue;
+                ArrayList<Region> myBestRegions = getMyRegionsWithGreatestArmies(state, 3);
 
-                                Region regTransfer = getTransferTarget(state, fromRegion);
-                                if (regTransfer != null)
-                                    attackTransferMoves.add(new AttackTransferMove(myName, fromRegion, regTransfer, armiesToPlace));
+                for(Region fromRegion : myBestRegions)
+		{
+                    if (searchedForFrontLines >= MAX_FRONT_LINES)
+                        break;
+                    //isContinentMine = BotState.continentBelongsToPlayer(state, fromRegion.getSuperRegion(), myName);
+                    armiesToPlaceTotal = fromRegion.getArmies() - 1;
+                    armiesToPlaceFrontLine = armiesToPlaceTotal / 2;
+
+                    if (armiesToPlaceTotal >= getAttackThreshold(state, fromRegion, true)) {
+                        // open two front lines
+                        if (armiesToPlaceFrontLine >= getAttackThreshold(state, fromRegion, false)) {
+                            openFrontLine(state, fromRegion, attackTransferMoves, armiesToPlaceFrontLine, true); 
+                            searchedForFrontLines++;
+                            if (searchedForFrontLines >= MAX_FRONT_LINES)
+                                break;
+                            openFrontLine(state, fromRegion, attackTransferMoves, armiesToPlaceFrontLine, false);
+                            searchedForFrontLines++;
                         }
+                        // open just one front line
+                        else {
+                            openFrontLine(state, fromRegion, attackTransferMoves, armiesToPlaceTotal, true);                                        
+                            searchedForFrontLines++;
+                        }
+                    }
+                                
 		}
+                
+//                System.out.printf("Paths search time %d ms \n", System.currentTimeMillis() - time);
 		
 		return attackTransferMoves;
 	}
