@@ -21,7 +21,6 @@ public class Region {
 	private SuperRegion superRegion;
 	private int armies;
 	private String playerName;
-        public ArrayList<Region> lastAttackPath; // for testing purposes only
         public ArrayList<Region> lastAttackPath1;
         public ArrayList<Region> lastAttackPath2;
         
