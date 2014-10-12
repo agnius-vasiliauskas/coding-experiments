@@ -312,12 +312,15 @@ public class Simulator {
         double myWinProbability = 0.0;
         double opponentWinProbability = 0.0;
         double myCaptures = 0.0, opponentCaptures = 0.0;
-        final int TOTAL_GAMES = 2000;
+        final int TOTAL_GAMES = 10;
 
         // return less than -1000 for errors
         
         for (int i = 0; i < TOTAL_GAMES; i++) {
-            initializeGameSettings();
+//            System.out.printf("Game %d of %d \n", i+1, TOTAL_GAMES);
+
+            if (i != 0) // when i zero - settings will be cleared by Simulator constructor
+                initializeGameSettings();
             
             if (checkMapSetupForTest().length() != 0 )
                 return -1001.0;
@@ -341,8 +344,8 @@ public class Simulator {
         double capturesTotal = myCaptures + opponentCaptures;
         double captureImprovement = 100.0 * ((myCaptures/capturesTotal) - (opponentCaptures/capturesTotal));
 
-        System.out.printf("Win rate impovement %6.2f%%\n", winImprovement);
-        System.out.printf("Country capture rate impovement %6.2f%%\n", captureImprovement);
+//        System.out.printf("Win rate impovement %6.2f%%\n", winImprovement);
+//        System.out.printf("Country capture rate impovement %6.2f%%\n", captureImprovement);
         
         if (winImprovement > 0.0)
             return winImprovement;
@@ -351,7 +354,7 @@ public class Simulator {
     }
     
     public String getSimulatedGameFailMessage() {
-        final double improvementTolerance = 0.01;
+        final double improvementTolerance = 1.0;
         
         if (myBot.getBotVersion() <= opponentBot.getBotVersion())
             return String.format("New bot version is not greater than old bot version (%d,%d)", myBot.getBotVersion(), opponentBot.getBotVersion());
@@ -362,7 +365,7 @@ public class Simulator {
             return String.format("Some game failed with specific error (error no = %f)", botImprovement);
         
         if (botImprovement < improvementTolerance)
-            return String.format("New bot version don't have non-negative improvement ! (improvement = %f%%)", botImprovement);
+            return String.format("New bot version don't have improvement greater than %6.2f%% ! (improvement = %f%%)", improvementTolerance ,botImprovement);
         
         return "";
     }

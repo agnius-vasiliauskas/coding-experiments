@@ -31,7 +31,7 @@ import move.PlaceArmiesMove;
 
 public class oldBot implements Bot 
 {
-       public final int botVersion = 35;
+       public final int botVersion = 36;
     
        private Region[] hqRegions = null;
     
@@ -222,7 +222,7 @@ public class oldBot implements Bot
         }
         
         private Region firstAlliedRegionWithTarget(BotState state) {
-            SuperRegion targetContinent = getContinentWithSmalestAmountOfEnemyArmies(state);
+            SuperRegion targetContinent = getContinentWithSmalestAmountOfEnemyCountries(state);
             Region placeArmiesRegion = firstRegionWithLowestAmountOfArmiesInNeighbors(state, targetContinent);        
             
             return placeArmiesRegion;
@@ -473,5 +473,5 @@ public class oldBot implements Bot
 		
 		return attackTransferMoves;
 	}
-        
+
 }
