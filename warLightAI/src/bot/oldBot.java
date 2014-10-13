@@ -31,7 +31,7 @@ import move.PlaceArmiesMove;
 
 public class oldBot implements Bot 
 {
-       public final int botVersion = 38;
+       public final int botVersion = 39;
     
        private Region[] hqRegions = null;
     
@@ -475,10 +475,10 @@ public class oldBot implements Bot
         }
         
         private int getAttackThreshold(BotState state, Region fromRegion, boolean forOneFrontline) {
-            if (forOneFrontline)
-                return (BotState.continentBelongsToPlayer(state, fromRegion.getSuperRegion(), state.getMyPlayerName()))? 4 : 2;
-            else
-                return 6;
+//            if (forOneFrontline)
+//            return (BotState.continentBelongsToPlayer(state, fromRegion.getSuperRegion(), state.getMyPlayerName()))? 4 : 2;
+//            else
+            return 6;
         }
 
         private void openFrontLine(BotState state , Region fromRegion, ArrayList<AttackTransferMove> attackTransferMoves, int armiesToPlace, boolean firstFrontLine) {
@@ -532,9 +532,10 @@ public class oldBot implements Bot
                 boolean isContinentMine;
                 long time = System.currentTimeMillis();
                 final int TIME_FACTOR = 3;
+                final int MAX_FIGHTING_COUNTRIES = 10;
                 
                 clearAllAttackPathsForMyRegions(state);
-                ArrayList<Region> myBestRegions = getMyRegionsWithGreatestArmies(state, 10);
+                ArrayList<Region> myBestRegions = getMyRegionsWithGreatestArmies(state, MAX_FIGHTING_COUNTRIES);
 
                 for(Region fromRegion : myBestRegions)
 		{
