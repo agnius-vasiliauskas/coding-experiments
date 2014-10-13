@@ -31,7 +31,7 @@ import move.PlaceArmiesMove;
 
 public class oldBot implements Bot 
 {
-       public final int botVersion = 37;
+       public final int botVersion = 38;
     
        private Region[] hqRegions = null;
     
@@ -529,17 +529,16 @@ public class oldBot implements Bot
 		String myName = state.getMyPlayerName();
 		int armiesToPlaceTotal;
 		int armiesToPlaceFrontLine;                
-                long time = System.currentTimeMillis();
                 boolean isContinentMine;
-                int searchedForFrontLines = 0;
-                int MAX_FRONT_LINES = 3;
+                long time = System.currentTimeMillis();
+                final int TIME_FACTOR = 3;
                 
                 clearAllAttackPathsForMyRegions(state);
-                ArrayList<Region> myBestRegions = getMyRegionsWithGreatestArmies(state, 3);
+                ArrayList<Region> myBestRegions = getMyRegionsWithGreatestArmies(state, 10);
 
                 for(Region fromRegion : myBestRegions)
 		{
-                    if (searchedForFrontLines >= MAX_FRONT_LINES)
+                    if (System.currentTimeMillis() - time > timeOut/TIME_FACTOR)
                         break;
                     //isContinentMine = BotState.continentBelongsToPlayer(state, fromRegion.getSuperRegion(), myName);
                     armiesToPlaceTotal = fromRegion.getArmies() - 1;
@@ -549,16 +548,13 @@ public class oldBot implements Bot
                         // open two front lines
                         if (armiesToPlaceFrontLine >= getAttackThreshold(state, fromRegion, false)) {
                             openFrontLine(state, fromRegion, attackTransferMoves, armiesToPlaceFrontLine, true); 
-                            searchedForFrontLines++;
-                            if (searchedForFrontLines >= MAX_FRONT_LINES)
+                            if (System.currentTimeMillis() - time > timeOut/TIME_FACTOR)
                                 break;
                             openFrontLine(state, fromRegion, attackTransferMoves, armiesToPlaceFrontLine, false);
-                            searchedForFrontLines++;
                         }
                         // open just one front line
                         else {
                             openFrontLine(state, fromRegion, attackTransferMoves, armiesToPlaceTotal, true);                                        
-                            searchedForFrontLines++;
                         }
                     }
                                 
@@ -568,5 +564,4 @@ public class oldBot implements Bot
 		
 		return attackTransferMoves;
 	}
-
 }
