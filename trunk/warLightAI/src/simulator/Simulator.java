@@ -317,8 +317,6 @@ public class Simulator {
         // return less than -1000 for errors
         
         for (int i = 0; i < TOTAL_GAMES; i++) {
-//            System.out.printf("Game %d of %d \n", i+1, TOTAL_GAMES);
-
             if (i != 0) // when i zero - settings will be cleared by Simulator constructor
                 initializeGameSettings();
             
@@ -336,6 +334,8 @@ public class Simulator {
             
             myCaptures += (double)state.timesCountryCaptureForMyBot;
             opponentCaptures += (double)state.timesCountryCaptureForOpponentBot;
+
+//          System.out.printf("Game %d of %d \n", i+1, TOTAL_GAMES);            
         }
         
         myWinProbability = myWinProbability / (double)TOTAL_GAMES;
