@@ -475,10 +475,7 @@ public class BotSpartacus implements Bot
         }
         
         private int getAttackThreshold(BotState state, Region fromRegion, boolean forOneFrontline) {
-//            if (forOneFrontline)
-//            return (BotState.continentBelongsToPlayer(state, fromRegion.getSuperRegion(), state.getMyPlayerName()))? 4 : 2;
-//            else
-            return 6;
+            return (BotState.continentBelongsToPlayer(state, fromRegion.getSuperRegion(), state.getMyPlayerName()))? 4 : 2;
         }
 
         private void openFrontLine(BotState state , Region fromRegion, ArrayList<AttackTransferMove> attackTransferMoves, int armiesToPlace, boolean firstFrontLine) {
