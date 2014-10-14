@@ -41,6 +41,12 @@ public class Simulator {
         DRAW,
         UNDEFINED
     }
+    
+    private interface Improvement {
+        double getWinImprovement();
+        double getCaptureImprovement();
+        int    getError();
+    }
 
     private void initializeGameSettings() {
         rnd = new Random();
@@ -308,23 +314,30 @@ public class Simulator {
         return calculateGameOutcome(state, playerNames[0], playerNames[1]);
     }
     
-    private double calculateBotImprovement() {
+    private Improvement calculateBotImprovement() {
         double myWinProbability = 0.0;
         double opponentWinProbability = 0.0;
         double myCaptures = 0.0, opponentCaptures = 0.0;
-        final int TOTAL_GAMES = 10;
+        final int TOTAL_GAMES = 100;
+        int error = 0;
 
         // return less than -1000 for errors
         
         for (int i = 0; i < TOTAL_GAMES; i++) {
+          System.out.printf("Game %d of %d \n", i+1, TOTAL_GAMES);            
+            
             if (i != 0) // when i zero - settings will be cleared by Simulator constructor
                 initializeGameSettings();
             
-            if (checkMapSetupForTest().length() != 0 )
-                return -1001.0;
+            if (checkMapSetupForTest().length() != 0 ) {
+                error = 1;
+                break;
+            }
 
-            if (setInitialRegionsForPlayers().length() != 0)
-                return -1002.0;
+            if (setInitialRegionsForPlayers().length() != 0) {
+                error = 2;
+                break;
+            }
 
             MyGameOutcome outcome = simulateTestGame();            
             if (outcome == MyGameOutcome.WIN)
@@ -335,37 +348,53 @@ public class Simulator {
             myCaptures += (double)state.timesCountryCaptureForMyBot;
             opponentCaptures += (double)state.timesCountryCaptureForOpponentBot;
 
-//          System.out.printf("Game %d of %d \n", i+1, TOTAL_GAMES);            
         }
-        
+
+        double capturesTotal = myCaptures + opponentCaptures;
         myWinProbability = myWinProbability / (double)TOTAL_GAMES;
         opponentWinProbability = opponentWinProbability / (double)TOTAL_GAMES;
-        double winImprovement = 100.0 * ( myWinProbability - opponentWinProbability);
-        double capturesTotal = myCaptures + opponentCaptures;
-        double captureImprovement = 100.0 * ((myCaptures/capturesTotal) - (opponentCaptures/capturesTotal));
-
-//        System.out.printf("Win rate impovement %6.2f%%\n", winImprovement);
-//        System.out.printf("Country capture rate impovement %6.2f%%\n", captureImprovement);
+        final double winImprovement = 100.0 * ( myWinProbability - opponentWinProbability);
+        final double captureImprovement = 100.0 * ((myCaptures/capturesTotal) - (opponentCaptures/capturesTotal));
+        final int errFinal = error;
         
-        if (winImprovement > 0.0)
-            return winImprovement;
-        else
-            return captureImprovement;
+        System.out.printf("Win rate impovement %6.2f%%\n", winImprovement);
+        System.out.printf("Country capture rate impovement %6.2f%%\n", captureImprovement);      
+                
+        return 
+                new Improvement() {
+                    @Override
+                    public double getWinImprovement() {
+                        return winImprovement;
+                    }
+                    @Override
+                    public double getCaptureImprovement() {
+                        return captureImprovement;
+                    }
+                    @Override
+                    public int getError() {
+                        return errFinal;
+                    }
+                };
     }
     
     public String getSimulatedGameFailMessage() {
-        final double improvementTolerance = 1.0;
+        final double improvementToleranceForWinRate = 5.0;
+        final double improvementToleranceForCaptureRate = 0.1;
         
         if (myBot.getBotVersion() <= opponentBot.getBotVersion())
             return String.format("New bot version is not greater than old bot version (%d,%d)", myBot.getBotVersion(), opponentBot.getBotVersion());
 
-        double botImprovement = calculateBotImprovement();
+        Improvement botImprovement = calculateBotImprovement();
         
-        if (botImprovement < -1000.0)
-            return String.format("Some game failed with specific error (error no = %f)", botImprovement);
+        if (botImprovement.getError() != 0)
+            return String.format("Some game failed with specific error (error no = %d)", botImprovement.getError());
         
-        if (botImprovement < improvementTolerance)
-            return String.format("New bot version don't have improvement greater than %6.2f%% ! (improvement = %f%%)", improvementTolerance ,botImprovement);
+        if (botImprovement.getWinImprovement() < improvementToleranceForWinRate && 
+            botImprovement.getCaptureImprovement() < improvementToleranceForCaptureRate)
+                return String.format("New bot version don't have improvement(s) greater than tolerance ! "
+                                   + "(win rate improvement = %6.2f%%, capture rate improvement = %6.2f%%)", 
+                                                botImprovement.getWinImprovement() ,
+                                                botImprovement.getCaptureImprovement());
         
         return "";
     }
