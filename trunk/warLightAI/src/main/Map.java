@@ -77,8 +77,9 @@ public class Map {
 		for(Region r : regions) //add neighbors to copied regions
 		{
 			Region newRegion = newMap.getRegion(r.getId());
-			for(Region neighbor : r.getNeighbors())
-				newRegion.addNeighbor(newMap.getRegion(neighbor.getId()));
+			for(Region neighbor : r.getNeighbors()) {
+                            newRegion.addNeighbor(newMap.getRegion(neighbor.getId()));
+                        }
 		}
 		return newMap;
 	}
