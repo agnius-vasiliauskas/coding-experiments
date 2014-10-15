@@ -318,7 +318,7 @@ public class Simulator {
         double myWinProbability = 0.0;
         double opponentWinProbability = 0.0;
         double myCaptures = 0.0, opponentCaptures = 0.0;
-        final int TOTAL_GAMES = 100;
+        final int TOTAL_GAMES = 10;
         int error = 0;
 
         // return less than -1000 for errors
