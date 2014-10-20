@@ -31,7 +31,7 @@ import move.PlaceArmiesMove;
 
 public class oldBot implements Bot 
 {
-       public final int botVersion = 40;
+       public final int botVersion = 41;
     
        private Region[] hqRegions = null;
     
@@ -267,7 +267,7 @@ public class oldBot implements Bot
             
             while (true) {
                 try {
-                    nextRegTry = fromReg.getNeighbors().get(startIx);
+                    nextRegTry = fromReg.getNeighbor(startIx);
                 } catch (IndexOutOfBoundsException e) {
                     break;
                 }
@@ -292,7 +292,7 @@ public class oldBot implements Bot
             
             while (true) {
                 try {
-                    nextRegTry = fromReg.getNeighbors().get(startIx);
+                    nextRegTry = fromReg.getNeighbor(startIx);
                 } catch (IndexOutOfBoundsException e) {
                     break;
                 }
@@ -475,10 +475,7 @@ public class oldBot implements Bot
         }
         
         private int getAttackThreshold(BotState state, Region fromRegion, boolean forOneFrontline) {
-//            if (forOneFrontline)
-//            return (BotState.continentBelongsToPlayer(state, fromRegion.getSuperRegion(), state.getMyPlayerName()))? 4 : 2;
-//            else
-            return 6;
+            return (BotState.continentBelongsToPlayer(state, fromRegion.getSuperRegion(), state.getMyPlayerName()))? 4 : 2;
         }
 
         private void openFrontLine(BotState state , Region fromRegion, ArrayList<AttackTransferMove> attackTransferMoves, int armiesToPlace, boolean firstFrontLine) {
@@ -565,4 +562,5 @@ public class oldBot implements Bot
 		
 		return attackTransferMoves;
 	}
+
 }
