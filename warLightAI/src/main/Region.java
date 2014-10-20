@@ -18,7 +18,6 @@ public class Region {
 	
 	private int id;
 	private ArrayList<Region> neighbors;
-        public Region[] neighborsForSearch;
 	private SuperRegion superRegion;
 	private int armies;
 	private String playerName;
@@ -27,7 +26,6 @@ public class Region {
         
 	public Region(int id, SuperRegion superRegion)
 	{
-                this.neighborsForSearch = null;
 		this.id = id;
 		this.superRegion = superRegion;
 		this.neighbors = new ArrayList<Region>();
@@ -39,7 +37,6 @@ public class Region {
 	
 	public Region(int id, SuperRegion superRegion, String playerName, int armies)
 	{
-                this.neighborsForSearch = null;
 		this.id = id;
 		this.superRegion = superRegion;
 		this.neighbors = new ArrayList<Region>();
@@ -109,17 +106,9 @@ public class Region {
 	}
         
         public Region getNeighbor(int iX) {
-            if (neighbors.size() > 0 && neighborsForSearch == null) {
-                neighborsForSearch = new Region[neighbors.size()];
-                neighborsForSearch = neighbors.toArray(neighborsForSearch);
-            }
-            
-            if (neighborsForSearch != null)
-                return neighborsForSearch[iX];
-
-            return null;
+            return this.getNeighbors().get(iX);            
         }
-	
+                
 	/**
 	 * @return The SuperRegion this Region is part of
 	 */
