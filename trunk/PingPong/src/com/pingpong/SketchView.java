@@ -1,5 +1,7 @@
 package com.pingpong;
 
+import com.pingpong.Game.GAME_RESULT;
+
 import android.content.*;
 import android.graphics.*;
 import android.graphics.Paint.*;
@@ -13,7 +15,7 @@ public class SketchView extends View {
 	private final long TIMEOUT_FOR_MESSAGES_MS = 1000;
 	private final int backGroundColor =  0xffffffff;
 	private final int drawColor =        0xffff0000;
-	private final int textColor = 0xff0000ff;
+	private final int textColor = 0xff808080;
 	
 	private long lastTimeForMessageInit;
 	private static Rect textBounds = new Rect();
@@ -135,10 +137,11 @@ public class SketchView extends View {
 		
 		canvas.drawBitmap(game.bitmapRacket, game.racketPosition[0], game.racketPosition[1], paint);
 		
-		canvas.drawBitmap(game.bitmapBall, game.ballPosition[0] - game.bitmapBall.getWidth() / 2, game.ballPosition[1] - game.bitmapBall.getHeight() / 2, paint);
+		if (game.getGameResult() == GAME_RESULT.NONE)
+			canvas.drawBitmap(game.bitmapBall, game.ballPosition[0] - game.bitmapBall.getWidth() / 2, game.ballPosition[1] - game.bitmapBall.getHeight() / 2, paint);
 		
 		String txtPoints = String.format("Points: %d, Blocks left: %d", game.points, game.visibleBlocks);
-		String txtLives = String.format("Lives: %d", game.lives);
+		String txtLives = String.format("Lives: %d", Vector2D.Clamp(game.lives, 0, 3));
 		Rect txtLivesBounds = new Rect();
 		paintStateText.getTextBounds(txtLives, 0, txtLives.length(), txtLivesBounds);
 		

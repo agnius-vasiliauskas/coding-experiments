@@ -17,7 +17,7 @@ class Block {
 		RED,
 		NONE
 	}
-	
+		
 	public static Bitmap bitmapBlockGreen;
 	public static Bitmap bitmapBlockBlue;
 	public static Bitmap bitmapBlockRed;
@@ -60,12 +60,18 @@ class Block {
 }
 
 public class Game {
+	
+	public enum GAME_RESULT {
+		NONE,
+		WIN,
+		LOOSE
+	}
 
 	public int BLOCKS_IN_ROW;
 	public int BLOCKS_IN_COLUMN;
 	public int STATUS_BAR_HEIGHT;
 	
-	private Point displaySize;
+	public Point displaySize;
 	private Random random;
 	
 	public Block[][] blocks = null;
@@ -165,7 +171,17 @@ public class Game {
 		}
 
 	}
-	
+		
+	public GAME_RESULT getGameResult() {
+		
+		if (lives == -1)
+			return GAME_RESULT.LOOSE;
+		else if (visibleBlocks == 0)
+			return GAME_RESULT.WIN;
+		
+		return GAME_RESULT.NONE;
+	}
+		
 	public Game(Point displaySize, Bitmap ball, Bitmap racket, Bitmap blockGreen, Bitmap blockBlue, Bitmap blockRed) {
 		STATUS_BAR_HEIGHT = 25;
 		
