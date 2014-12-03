@@ -4,6 +4,63 @@ import android.graphics.*;
 
 public class Vector2D {
 	
+	private enum CLOCK_DIR
+    {
+        CLOCKWISE,
+        COUNTER_CLOCKWISE,
+        LINE
+    }
+	
+	public enum LINE_TYPE
+	{
+		VERTICAL,
+		HORIZONTAL,
+		UNKNOWN
+	}
+	
+	public static LINE_TYPE getLineType(float[] pt1, float[] pt2) {
+		
+		if (pt1[0] == pt2[0])
+			return LINE_TYPE.VERTICAL;
+		else if (pt1[1] == pt2[1])
+			return LINE_TYPE.HORIZONTAL;
+		else
+			return LINE_TYPE.UNKNOWN;
+	}
+	
+    private static CLOCK_DIR pointsDirection(float[] pt1, float[] pt2, float[] pt3)
+    {
+        float test = (((pt2[0] - pt1[0]) * (pt3[1] - pt1[1])) - ((pt3[0] - pt1[0]) * (pt2[1] - pt1[1])));
+
+        if (test > 0) 
+        	return CLOCK_DIR.COUNTER_CLOCKWISE;
+        else if (test < 0) 
+        	return CLOCK_DIR.CLOCKWISE;
+        else 
+        	return CLOCK_DIR.LINE;
+    }
+    
+    public static boolean linesIntersect(float[] l1p1, float[] l1p2, float[] l2p1, float[] l2p2)
+    {
+    	CLOCK_DIR test1_a, test1_b, test2_a, test2_b;
+
+        test1_a = pointsDirection(l1p1, l1p2, l2p1);
+        test1_b = pointsDirection(l1p1, l1p2, l2p2);
+        
+        if (test1_a != test1_b)
+        {
+            test2_a = pointsDirection(l2p1, l2p2, l1p1);
+            test2_b = pointsDirection(l2p1, l2p2, l1p2);
+            
+            if (test2_a != test2_b)
+            {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+	
 	private static float dotProduct(float[] vec1, float[] vec2) {
 		return vec1[0] * vec2[0] + vec1[1] * vec2[1];
 	}

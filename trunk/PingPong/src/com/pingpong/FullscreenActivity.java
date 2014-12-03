@@ -72,12 +72,14 @@ public class FullscreenActivity extends Activity {
         setContentView(sketchView);    	
         
         // setup game
-        Bitmap ball = getBitmapResource(0);
-        Bitmap racket = getBitmapResource(3);
-        Bitmap block = getBitmapResource(1);
+        Bitmap ball =       getBitmapResource(0);
+        Bitmap racket =     getBitmapResource(5);
+        Bitmap blockGreen = getBitmapResource(1);
+        Bitmap blockBlue =  getBitmapResource(2);
+        Bitmap blockRed =   getBitmapResource(3);
         
         displaySize = new Point(displaySize.y, displaySize.x);
-        game = new Game(displaySize, ball, racket, block);
+        game = new Game(displaySize, ball, racket, blockGreen, blockBlue, blockRed);
     }
     
     private void setupUiInteraction() {

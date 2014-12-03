@@ -3,8 +3,44 @@ package com.pingpong;
 import java.util.Arrays;
 import java.util.Random;
 
+import com.pingpong.Block.BLOCK_TYPE;
+import com.pingpong.Vector2D.LINE_TYPE;
+
 import android.graphics.Bitmap;
 import android.graphics.Point;
+
+class Block {
+	
+	public enum BLOCK_TYPE {
+		GREEN,
+		BLUE,
+		RED,
+		NONE
+	}
+	
+	public static Bitmap bitmapBlockGreen;
+	public static Bitmap bitmapBlockBlue;
+	public static Bitmap bitmapBlockRed;
+
+	public float[] coords;
+	public BLOCK_TYPE blockType;
+	
+	public Block(float[] coords) {
+		this.blockType = BLOCK_TYPE.NONE;
+		this.coords = coords;
+	}
+	
+	public Bitmap blockImage() {
+		if (blockType == BLOCK_TYPE.GREEN)
+			return bitmapBlockGreen;
+		else if (blockType == BLOCK_TYPE.BLUE)
+			return bitmapBlockBlue;
+		else if (blockType == BLOCK_TYPE.RED)
+			return bitmapBlockRed;
+		
+		return null;
+	}
+}
 
 public class Game {
 
@@ -15,74 +51,101 @@ public class Game {
 	private Point displaySize;
 	private Random random;
 	
-	public boolean[][] blocks = null;
+	public Block[][] blocks = null;
 	public float[] ballPosition;
 	public float[] racketPosition;
 	
 	public int lives;
 	public int points;
 	
-	public Bitmap ball;
-	public Bitmap racket;
-	public Bitmap block;
+	public Bitmap bitmapBall;
+	public Bitmap bitmapRacket;
 	
-	public final float paddingX = 20.0f;
+	private final float RIGHT_FIX = 50.0f;
+	public final float paddingX = 40.0f;
 	public final float paddingY = 40.0f;
 	
 	private float[] ballDirection;
 	private float   ballSpeed;
 	
-	private final float[] ZERO_VECTOR = new float[] {0.0f, 0.0f};
-	
-	private void generateLeftTopQuarterOfBlocks() {
+	private void setVisibilityLeftTopQuarterOfBlocks() {
+		final int PROBABILITY_OF_BLOCK = 80;
+		final int PROBABILITY_OF_BLOCK_RED = 10;
+		final int PROBABILITY_OF_BLOCK_BLUE = 30;
 		
 		for (int row=0; row < BLOCKS_IN_COLUMN/2; row++) {
 			
 			for (int column=0; column < BLOCKS_IN_ROW/2; column++) {
-				blocks[row][column] = (random.nextInt(101) <= 80 )? true : false;
+
+				blocks[row][column].blockType = BLOCK_TYPE.NONE;
+				
+				if (random.nextInt(101) <= PROBABILITY_OF_BLOCK) {
+					int rnd = random.nextInt(101);
+					if (rnd <= PROBABILITY_OF_BLOCK_RED)
+						blocks[row][column].blockType = BLOCK_TYPE.RED;
+					else if (rnd <= PROBABILITY_OF_BLOCK_BLUE)
+						blocks[row][column].blockType = BLOCK_TYPE.BLUE;
+					else
+						blocks[row][column].blockType = BLOCK_TYPE.GREEN;
+					
+				}
 			}
 			
 		}		
 	}
 
-	private void generateRightTopQuarterOfBlocks() {
+	private void setVisibilityRightTopQuarterOfBlocks() {
 		
 		for (int row=0; row < BLOCKS_IN_COLUMN/2; row++) {
 			
 			for (int column=BLOCKS_IN_ROW/2; column < BLOCKS_IN_ROW; column++) {
-				blocks[row][column] = blocks[row][BLOCKS_IN_ROW - (column + 1)];
+				blocks[row][column].blockType = blocks[row][BLOCKS_IN_ROW - (column + 1)].blockType;
 			}
 			
 		}		
 	}	
 
-	private void generateRightBottomQuarterOfBlocks() {
+	private void setVisibilityRightBottomQuarterOfBlocks() {
 		
 		for (int row=BLOCKS_IN_COLUMN/2; row < BLOCKS_IN_COLUMN; row++) {
 			
 			for (int column=BLOCKS_IN_ROW/2; column < BLOCKS_IN_ROW; column++) {
-				blocks[row][column] = blocks[BLOCKS_IN_COLUMN - (row + 1)][column];
+				blocks[row][column].blockType = blocks[BLOCKS_IN_COLUMN - (row + 1)][column].blockType;
 			}
 			
 		}		
 	}	
 
-	private void generateLeftBottomQuarterOfBlocks() {
+	private void setVisibilityLeftBottomQuarterOfBlocks() {
 		
 		for (int row=BLOCKS_IN_COLUMN/2; row < BLOCKS_IN_COLUMN; row++) {
 			
 			for (int column=0; column < BLOCKS_IN_ROW/2; column++) {
-				blocks[row][column] = blocks[BLOCKS_IN_COLUMN - (row + 1)][column];
+				blocks[row][column].blockType = blocks[BLOCKS_IN_COLUMN - (row + 1)][column].blockType;
 			}
 			
 		}		
 	}	
 
+	private void generateBlocks() {
+		
+		for (int row=0; row < BLOCKS_IN_COLUMN; row++) {
+			
+			for (int column=0; column < BLOCKS_IN_ROW; column++) {
+				float x = paddingX + column * Block.bitmapBlockGreen.getWidth();
+				float y = paddingY + row * Block.bitmapBlockGreen.getHeight();
+				
+				blocks[row][column] = new Block(new float[] {x, y});
+			}
+			
+		}
+
+	}
 	
-	public Game(Point displaySize, Bitmap ball, Bitmap racket, Bitmap block) {
+	public Game(Point displaySize, Bitmap ball, Bitmap racket, Bitmap blockGreen, Bitmap blockBlue, Bitmap blockRed) {
 		STATUS_BAR_HEIGHT = 25;
 		
-		ballDirection = new float[] {-1, -1};
+		ballDirection = Vector2D.Normalize(new float[] {+1.0f, -1.0f});
 		ballSpeed = 1.0f;
 		
 		random = new Random();
@@ -90,84 +153,175 @@ public class Game {
 		lives = 3;
 		points = 0;
 		
-		BLOCKS_IN_ROW = (displaySize.x - 4 * (int)paddingX) / block.getWidth();
-		BLOCKS_IN_COLUMN = (displaySize.y - 2 * (int)paddingY - 2 * racket.getHeight() - 2 * ball.getHeight()) / block.getHeight();
+		BLOCKS_IN_ROW = (displaySize.x - (int)RIGHT_FIX - 2 * (int)paddingX) / blockGreen.getWidth();
+		BLOCKS_IN_COLUMN = (displaySize.y - 2 * (int)paddingY - 2 * racket.getHeight() - 2 * ball.getHeight()) / blockGreen.getHeight();
 
 		BLOCKS_IN_ROW = (BLOCKS_IN_ROW % 2 == 0)? BLOCKS_IN_ROW : BLOCKS_IN_ROW - 1;
 		BLOCKS_IN_COLUMN = (BLOCKS_IN_COLUMN % 2 == 0)? BLOCKS_IN_COLUMN : BLOCKS_IN_COLUMN - 1;		
 		
-		blocks = new boolean[BLOCKS_IN_COLUMN][BLOCKS_IN_ROW];
+		blocks = new Block[BLOCKS_IN_COLUMN][BLOCKS_IN_ROW];
 		
 		this.displaySize = displaySize;
-		this.ball = ball;
-		this.racket = racket;
-		this.block = block;
+		this.bitmapBall = ball;
+		this.bitmapRacket = racket;
+		Block.bitmapBlockGreen = blockGreen;
+		Block.bitmapBlockBlue = blockBlue;
+		Block.bitmapBlockRed = blockRed;
 		
-		generateLeftTopQuarterOfBlocks();
-		generateRightTopQuarterOfBlocks();
-		generateRightBottomQuarterOfBlocks();
-		generateLeftBottomQuarterOfBlocks();
+		generateBlocks();
+		setVisibilityLeftTopQuarterOfBlocks();
+		setVisibilityRightTopQuarterOfBlocks();
+		setVisibilityRightBottomQuarterOfBlocks();
+		setVisibilityLeftBottomQuarterOfBlocks();
 		
-		racketPosition = new float[] {displaySize.x / 2 - racket.getWidth() / 2 - paddingX, displaySize.y -  racket.getHeight() - paddingY};
-		ballPosition = new float[] {racketPosition[0] + racket.getWidth() / 2 - ball.getWidth() / 2, racketPosition[1] - ball.getHeight()};
+		racketPosition = new float[] {(displaySize.x - RIGHT_FIX) / 2 - racket.getWidth() / 2, displaySize.y -  racket.getHeight() - paddingY};
+		ballPosition = new float[] {racketPosition[0] + racket.getWidth() / 2, racketPosition[1] - ball.getHeight()};
 	}
-	
-	private float[] getCollidingBorderVector(float[] oldPosition, float[] newPosition) {
-		float[] vec = Arrays.copyOf(ZERO_VECTOR, 2);
-		float dX = newPosition[0] - oldPosition[0];
-		float dY = newPosition[1] - oldPosition[1];
 		
-		final float RIGHT_FIX = 50.0f;
+	private boolean updateBallDirectionOnCollisionWithLine(float[] oldPosition, float[] newPosition, float[] lineStart, float[] lineEnd) {
+		float[] newPositionExtended = Vector2D.Add(newPosition, Vector2D.MultiplyScalar(ballDirection, (float)bitmapBall.getWidth() / 2.0f));
+		boolean collides = Vector2D.linesIntersect(oldPosition, newPositionExtended, lineStart, lineEnd);
+		float[] speedProjectionOnCollidingLine = new float[2];
 		
-		// gets out to the left o right
-		if (newPosition[0] < 0.0f || newPosition[0] > displaySize.x - RIGHT_FIX - ball.getWidth()) {
-			vec[0] = 0.0f;
-			vec[1] = (dY > 0)? +1.0f : -1.0f;
-		}
-		// gets out to bottom or top
-		else if (newPosition[1] < 0.0f || newPosition[1] > displaySize.y - STATUS_BAR_HEIGHT - ball.getHeight()) {
-			vec[0] = (dX > 0)? +1.0f : -1.0f;
-			vec[1] = 0.0f;			
-		}
-		
-		return vec;
-	}
-	
-	private boolean updateBallDirectionOnCollisionWithWall(float[] oldPosition, float[] newPosition) {
-		float[] borderVector = getCollidingBorderVector(oldPosition, newPosition);
-		float sign = 0.0f;
-		float dXSign = Math.signum(newPosition[0] - oldPosition[0]);
-		float dYSign = Math.signum(newPosition[1] - oldPosition[1]);
-		boolean dirUpdated = false;
-		
-		if (!Arrays.equals(borderVector, ZERO_VECTOR)) {
-			// gets out to the left o right
-			if (borderVector[0] == 0.0f) {
+		if (collides) {
+			Vector2D.LINE_TYPE lineType = Vector2D.getLineType(lineStart, lineEnd);
+			
+			float sign = 0.0f;
+			float dXSign = Math.signum(newPosition[0] - oldPosition[0]);
+			float dYSign = Math.signum(newPosition[1] - oldPosition[1]);
+			
+			if (lineType == LINE_TYPE.VERTICAL) {
+				speedProjectionOnCollidingLine[0] = 0.0f;
+				speedProjectionOnCollidingLine[1] = dYSign;
+				
 				sign = (dXSign == dYSign)? +1.0f : -1.0f;
 			}
-			// gets out to top or bottom
-			else if (borderVector[1] == 0.0f) {
+			else if (lineType == LINE_TYPE.HORIZONTAL) {
+				speedProjectionOnCollidingLine[0] = dXSign;
+				speedProjectionOnCollidingLine[1] = 0.0f;
+				
 				sign = (dXSign != dYSign)? +1.0f : -1.0f;
 			}
 			
-			int angle = Vector2D.angleBetweenTwoVectors(borderVector, ballDirection);
-			float[] newDirection = Vector2D.RotateVector(ballDirection, (int)sign * 2 * angle);
+			final float[] ZERO_VECTOR = {0.0f, 0.0f};
+			int angle;
+			float[] newDirection;
+			
+			if (Arrays.equals(speedProjectionOnCollidingLine, ZERO_VECTOR)) {
+				angle = 180;
+				newDirection = Vector2D.RotateVector(ballDirection, angle);				
+			}
+			else {
+				angle = Vector2D.angleBetweenTwoVectors(speedProjectionOnCollidingLine, ballDirection);
+				newDirection = Vector2D.RotateVector(ballDirection, (int)sign * 2 * angle);				
+			}
+			
 			newDirection = Vector2D.Normalize(newDirection);
 			ballDirection = newDirection;
-			
-			dirUpdated = true;
+
 		}
 		
-		return dirUpdated;
+		return collides;
+	}
+		
+	private boolean dirChangedBecauseOfScreenBorders(float[] oldPosition, float[] newPosition) {
+		
+		boolean dirChangedBecauseOfLine = false;
+		float[][][] lines = getRectangleBorderLines(new float[] {0.0f, 0.0f}, displaySize.x - RIGHT_FIX, displaySize.y - STATUS_BAR_HEIGHT);
+				
+		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[0][0], lines[0][1]) : dirChangedBecauseOfLine;
+		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[1][0], lines[1][1]) : dirChangedBecauseOfLine;
+		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[2][0], lines[2][1]) : dirChangedBecauseOfLine;
+		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[3][0], lines[3][1]) : dirChangedBecauseOfLine;
+		
+		return dirChangedBecauseOfLine;
+	}
+	
+	private float[][][] getRectangleBorderLines(float[] start, float width, float height) {
+		float[][][] lines = new float[4][][];
+		
+		float[] leftStart = {start[0], start[1]};
+		float[] leftEnd =   {start[0], start[1] + height};
+
+		float[] rightStart = {start[0] + width, start[1]};
+		float[] rightEnd =   {start[0] + width, start[1] + height};
+
+		float[] topStart = {start[0],         start[1]};
+		float[] topEnd =   {start[0] + width, start[1]};
+
+		float[] bottomStart = {start[0],         start[1] + height};
+		float[] bottomEnd =   {start[0] + width, start[1] + height};
+		
+		lines[0] = new float[][] {leftStart, leftEnd};
+		lines[1] = new float[][] {rightStart, rightEnd};
+		lines[2] = new float[][] {topStart, topEnd};
+		lines[3] = new float[][] {bottomStart, bottomEnd};
+		
+		return lines;
+	}
+
+	private boolean dirChangedBecauseOfRacketBorders(float[] oldPosition, float[] newPosition) {
+		
+		boolean dirChangedBecauseOfLine = false;
+		float[][][] lines = getRectangleBorderLines(new float[] {racketPosition[0], racketPosition[1]}, bitmapRacket.getWidth(), bitmapRacket.getHeight());
+
+		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[0][0], lines[0][1]) : dirChangedBecauseOfLine;
+		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[1][0], lines[1][1]) : dirChangedBecauseOfLine;
+		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[2][0], lines[2][1]) : dirChangedBecauseOfLine;
+		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[3][0], lines[3][1]) : dirChangedBecauseOfLine;
+		
+		return dirChangedBecauseOfLine;
+	}
+	
+	private boolean dirChangedBecauseOfBlock(float[] oldPosition, float[] newPosition, Block block) {
+		boolean dirChangedBecauseOfLine = false;
+		float[][][] lines = getRectangleBorderLines(new float[] {block.coords[0], block.coords[1]}, Block.bitmapBlockGreen.getWidth(), Block.bitmapBlockGreen.getHeight());
+
+		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[0][0], lines[0][1]) : dirChangedBecauseOfLine;
+		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[1][0], lines[1][1]) : dirChangedBecauseOfLine;
+		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[2][0], lines[2][1]) : dirChangedBecauseOfLine;
+		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[3][0], lines[3][1]) : dirChangedBecauseOfLine;
+
+		if (dirChangedBecauseOfLine) {
+			block.blockType = BLOCK_TYPE.NONE;
+		}
+		
+		return dirChangedBecauseOfLine;		
+	}
+	
+	private boolean dirChangedBecauseOfBlockGrid(float[] oldPosition, float[] newPosition) {
+		int colCurrent = ((int)newPosition[0] - (int)paddingX) / Block.bitmapBlockGreen.getWidth();
+		int rowCurrent = ((int)newPosition[1] - (int)paddingY) / Block.bitmapBlockGreen.getHeight();
+		final int BLOCK_COUNT = 2;
+		
+		for (int row = rowCurrent - BLOCK_COUNT; row < rowCurrent + BLOCK_COUNT + 1; row++) {
+			for (int column = colCurrent - BLOCK_COUNT; column < colCurrent + BLOCK_COUNT + 1; column++) {
+				try {					
+					if (blocks[row][column].blockType != BLOCK_TYPE.NONE) {
+						boolean dirChangedBecauseOfLine = dirChangedBecauseOfBlock(oldPosition, newPosition, blocks[row][column]);
+						if (dirChangedBecauseOfLine)
+							return true;
+					}
+				} catch (IndexOutOfBoundsException e) {
+				}
+				
+			}
+			
+		}
+		
+		return false;	
 	}
 	
 	public void updateGame() {
 		float[] oldPosition = ballPosition;
 		float[] newPosition = Vector2D.Add(ballPosition, Vector2D.MultiplyScalar(ballDirection, ballSpeed));
 		
-		boolean dirChangedBecauseOfWall = updateBallDirectionOnCollisionWithWall(oldPosition, newPosition);
-		
-		if (!dirChangedBecauseOfWall)
+		boolean dirChangedBecauseOfLine = false;
+		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? dirChangedBecauseOfScreenBorders(oldPosition, newPosition) : dirChangedBecauseOfLine;
+		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? dirChangedBecauseOfRacketBorders(oldPosition, newPosition) : dirChangedBecauseOfLine;
+		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? dirChangedBecauseOfBlockGrid(oldPosition, newPosition)     : dirChangedBecauseOfLine;
+				
+		if (!dirChangedBecauseOfLine)
 			ballPosition = newPosition;
 	}
 }
