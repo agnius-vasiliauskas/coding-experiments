@@ -91,13 +91,33 @@ public class FullscreenActivity extends Activity {
             public boolean onTouch(View v, MotionEvent event) {
             	
                 if (event.getAction() == MotionEvent.ACTION_DOWN){
-                	
-//                	float[] coords = {event.getX(), event.getY()};
-                	if (programState.getProgramState() == State.STATE_GAME_NO_GAME)
+
+                	// update program state
+                	if (programState.getProgramState() == State.STATE_GAME_NO_GAME) {
                 		programState.setProgramState(State.STATE_GAME_PROCESS);
+                	}
+                	else if (programState.getProgramState() == State.STATE_GAME_PROCESS) {
+                    	// update racket speed
+                    	float[] hitCoords = {event.getX(), event.getY()};
+                    	
+                    	float newRacketSpeed = 0.0f;
+                    	if (hitCoords[0] > game.racketPosition[0] + game.bitmapRacket.getWidth() / 2)
+                    		newRacketSpeed = +2.0f;
+                    	else if (hitCoords[0] < game.racketPosition[0] + game.bitmapRacket.getWidth() / 2)
+                    		newRacketSpeed = -2.0f;
+                    	
+                    	if (newRacketSpeed != 0.0f)
+                    		game.racketSpeed = newRacketSpeed;
+                	}
                 	
-                	sketchView.invalidate();
                 }
+                else if (event.getAction() == MotionEvent.ACTION_UP) {
+                	if (programState.getProgramState() == State.STATE_GAME_PROCESS) {
+                		game.racketSpeed = 0.0f;
+                	}
+                }
+                
+            	sketchView.invalidate();
                 
                 return true;
             }
