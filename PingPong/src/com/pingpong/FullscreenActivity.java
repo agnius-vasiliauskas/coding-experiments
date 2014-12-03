@@ -22,6 +22,14 @@ public class FullscreenActivity extends Activity {
     private SketchView sketchView = null;
     private ProgramState programState = null;
     private Game game = null;
+    
+    // game resources
+    private static Bitmap ball;
+    private static Bitmap racket;
+    private static Bitmap blockGreen;
+    private static Bitmap blockBlue;
+    private static Bitmap blockRed;
+    private static Point  displaySizeForGame;
 
     public Bitmap getBitmapResource(int index) 
     {
@@ -71,15 +79,14 @@ public class FullscreenActivity extends Activity {
         
         setContentView(sketchView);    	
         
-        // setup game
-        Bitmap ball =       getBitmapResource(0);
-        Bitmap racket =     getBitmapResource(5);
-        Bitmap blockGreen = getBitmapResource(1);
-        Bitmap blockBlue =  getBitmapResource(2);
-        Bitmap blockRed =   getBitmapResource(3);
+        // setup game resources
+        ball =       getBitmapResource(0);
+        racket =     getBitmapResource(5);
+        blockGreen = getBitmapResource(1);
+        blockBlue =  getBitmapResource(2);
+        blockRed =   getBitmapResource(3);        
+        displaySizeForGame = new Point(displaySize.y, displaySize.x);
         
-        displaySize = new Point(displaySize.y, displaySize.x);
-        game = new Game(displaySize, ball, racket, blockGreen, blockBlue, blockRed);
     }
     
     private void setupUiInteraction() {
@@ -93,7 +100,12 @@ public class FullscreenActivity extends Activity {
                 if (event.getAction() == MotionEvent.ACTION_DOWN){
 
                 	// update program state
-                	if (programState.getProgramState() == State.STATE_GAME_NO_GAME) {
+                	if (programState.getProgramState() == State.STATE_GAME_NO_GAME || 
+                		programState.getProgramState() == State.STATE_GAME_END) {
+                		
+                        game = new Game(displaySizeForGame, ball, racket, blockGreen, blockBlue, blockRed);
+                        sketchView.setGame(game);
+                        programState.setGameObject(game);
                 		programState.setProgramState(State.STATE_GAME_PROCESS);
                 	}
                 	else if (programState.getProgramState() == State.STATE_GAME_PROCESS) {
@@ -164,13 +176,12 @@ public class FullscreenActivity extends Activity {
                 	
         // program setup
         
-    	programState = new ProgramState(sketchView, this.game);
+    	programState = new ProgramState(sketchView);
     	                
         programState.setProgramState(State.STATE_GAME_NO_GAME);
 
         setupUiInteraction();
-        
-        sketchView.setGame(this.game);
+
         sketchView.invalidate();
                 
         beginGameStateMonitoring();
