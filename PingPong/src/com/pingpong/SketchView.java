@@ -123,25 +123,19 @@ public class SketchView extends View {
 		
 		for (int row=0; row < game.BLOCKS_IN_COLUMN; row++) {
 			
-			for (int column=0; column < game.BLOCKS_IN_ROW; column++) {
-				float x = game.paddingX + column * game.block.getWidth();
-				float y = game.paddingY + row * game.block.getHeight();
-				
-				if (game.blocks[row][column]) {
-					canvas.drawBitmap(game.block, x, y, paint);
+			for (int column=0; column < game.BLOCKS_IN_ROW; column++) {				
+				Block block = game.blocks[row][column];
+				Bitmap blockImage = block.blockImage();
+				if (blockImage != null) {
+					canvas.drawBitmap(blockImage, block.coords[0], block.coords[1], paint);
 				}
 			}
 			
 		}
 		
-		float endX = game.paddingX + (game.BLOCKS_IN_ROW - 1) * game.block.getWidth() + game.block.getWidth();
-		int shift = (int)endX - canvas.getWidth();
-		if (shift > 0)
-			setMessages("Last block X shift", String.format("%d", shift));
+		canvas.drawBitmap(game.bitmapRacket, game.racketPosition[0], game.racketPosition[1], paint);
 		
-		canvas.drawBitmap(game.racket, game.racketPosition[0], game.racketPosition[1], paint);
-		
-		canvas.drawBitmap(game.ball, game.ballPosition[0], game.ballPosition[1], paint);
+		canvas.drawBitmap(game.bitmapBall, game.ballPosition[0] - game.bitmapBall.getWidth() / 2, game.ballPosition[1] - game.bitmapBall.getHeight() / 2, paint);
 		
 		String txtPoints = String.format("Points: %d", game.points);
 		String txtLives = String.format("Lives: %d", game.lives);
