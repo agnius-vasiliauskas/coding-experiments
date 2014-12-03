@@ -137,7 +137,7 @@ public class SketchView extends View {
 		
 		canvas.drawBitmap(game.bitmapBall, game.ballPosition[0] - game.bitmapBall.getWidth() / 2, game.ballPosition[1] - game.bitmapBall.getHeight() / 2, paint);
 		
-		String txtPoints = String.format("Points: %d", game.points);
+		String txtPoints = String.format("Points: %d, Blocks left: %d", game.points, game.visibleBlocks);
 		String txtLives = String.format("Lives: %d", game.lives);
 		Rect txtLivesBounds = new Rect();
 		paintStateText.getTextBounds(txtLives, 0, txtLives.length(), txtLivesBounds);

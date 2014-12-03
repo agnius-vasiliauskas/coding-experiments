@@ -22,6 +22,10 @@ class Block {
 	public static Bitmap bitmapBlockBlue;
 	public static Bitmap bitmapBlockRed;
 
+	public static final int PROBABILITY_OF_BLOCK = 80;
+	public static final int PROBABILITY_OF_BLOCK_RED = 10;
+	public static final int PROBABILITY_OF_BLOCK_BLUE = 30;	
+	
 	public float[] coords;
 	public BLOCK_TYPE blockType;
 	
@@ -31,6 +35,7 @@ class Block {
 	}
 	
 	public Bitmap blockImage() {
+		
 		if (blockType == BLOCK_TYPE.GREEN)
 			return bitmapBlockGreen;
 		else if (blockType == BLOCK_TYPE.BLUE)
@@ -39,6 +44,18 @@ class Block {
 			return bitmapBlockRed;
 		
 		return null;
+	}
+	
+	public int blockPoints() {
+		
+		if (blockType == BLOCK_TYPE.GREEN)
+			return 100 - PROBABILITY_OF_BLOCK;
+		else if (blockType == BLOCK_TYPE.BLUE)
+			return 100 - PROBABILITY_OF_BLOCK_BLUE;
+		else if (blockType == BLOCK_TYPE.RED)
+			return 100 - PROBABILITY_OF_BLOCK_RED;
+		
+		return 0;
 	}
 }
 
@@ -52,11 +69,10 @@ public class Game {
 	private Random random;
 	
 	public Block[][] blocks = null;
-	public float[] ballPosition;
-	public float[] racketPosition;
 	
 	public int lives;
 	public int points;
+	public int visibleBlocks;
 	
 	public Bitmap bitmapBall;
 	public Bitmap bitmapRacket;
@@ -65,13 +81,14 @@ public class Game {
 	public final float paddingX = 40.0f;
 	public final float paddingY = 40.0f;
 	
+	public float[]  ballPosition;
 	private float[] ballDirection;
 	private float   ballSpeed;
 	
+	public float[] racketPosition;
+	public float   racketSpeed;
+	
 	private void setVisibilityLeftTopQuarterOfBlocks() {
-		final int PROBABILITY_OF_BLOCK = 80;
-		final int PROBABILITY_OF_BLOCK_RED = 10;
-		final int PROBABILITY_OF_BLOCK_BLUE = 30;
 		
 		for (int row=0; row < BLOCKS_IN_COLUMN/2; row++) {
 			
@@ -79,11 +96,12 @@ public class Game {
 
 				blocks[row][column].blockType = BLOCK_TYPE.NONE;
 				
-				if (random.nextInt(101) <= PROBABILITY_OF_BLOCK) {
+				if (random.nextInt(101) <= Block.PROBABILITY_OF_BLOCK) {
+					visibleBlocks++;
 					int rnd = random.nextInt(101);
-					if (rnd <= PROBABILITY_OF_BLOCK_RED)
+					if (rnd <= Block.PROBABILITY_OF_BLOCK_RED)
 						blocks[row][column].blockType = BLOCK_TYPE.RED;
-					else if (rnd <= PROBABILITY_OF_BLOCK_BLUE)
+					else if (rnd <= Block.PROBABILITY_OF_BLOCK_BLUE)
 						blocks[row][column].blockType = BLOCK_TYPE.BLUE;
 					else
 						blocks[row][column].blockType = BLOCK_TYPE.GREEN;
@@ -100,6 +118,8 @@ public class Game {
 			
 			for (int column=BLOCKS_IN_ROW/2; column < BLOCKS_IN_ROW; column++) {
 				blocks[row][column].blockType = blocks[row][BLOCKS_IN_ROW - (column + 1)].blockType;
+				if (blocks[row][column].blockType != BLOCK_TYPE.NONE)
+					visibleBlocks++;
 			}
 			
 		}		
@@ -111,6 +131,8 @@ public class Game {
 			
 			for (int column=BLOCKS_IN_ROW/2; column < BLOCKS_IN_ROW; column++) {
 				blocks[row][column].blockType = blocks[BLOCKS_IN_COLUMN - (row + 1)][column].blockType;
+				if (blocks[row][column].blockType != BLOCK_TYPE.NONE)
+					visibleBlocks++;
 			}
 			
 		}		
@@ -122,6 +144,8 @@ public class Game {
 			
 			for (int column=0; column < BLOCKS_IN_ROW/2; column++) {
 				blocks[row][column].blockType = blocks[BLOCKS_IN_COLUMN - (row + 1)][column].blockType;
+				if (blocks[row][column].blockType != BLOCK_TYPE.NONE)
+					visibleBlocks++;
 			}
 			
 		}		
@@ -148,10 +172,13 @@ public class Game {
 		ballDirection = Vector2D.Normalize(new float[] {+1.0f, -1.0f});
 		ballSpeed = 1.0f;
 		
+		racketSpeed = 0.0f;
+		
 		random = new Random();
 		
 		lives = 3;
 		points = 0;
+		visibleBlocks = 0;
 		
 		BLOCKS_IN_ROW = (displaySize.x - (int)RIGHT_FIX - 2 * (int)paddingX) / blockGreen.getWidth();
 		BLOCKS_IN_COLUMN = (displaySize.y - 2 * (int)paddingY - 2 * racket.getHeight() - 2 * ball.getHeight()) / blockGreen.getHeight();
@@ -176,6 +203,19 @@ public class Game {
 		
 		racketPosition = new float[] {(displaySize.x - RIGHT_FIX) / 2 - racket.getWidth() / 2, displaySize.y -  racket.getHeight() - paddingY};
 		ballPosition = new float[] {racketPosition[0] + racket.getWidth() / 2, racketPosition[1] - ball.getHeight()};
+	}
+	
+	private boolean updateBallPositionOnCollisionWithBottomLine(float[] oldPosition, float[] newPosition, float[] lineStart, float[] lineEnd) {
+		float[] newPositionExtended = Vector2D.Add(newPosition, Vector2D.MultiplyScalar(ballDirection, (float)bitmapBall.getWidth() / 2.0f));
+		boolean collides = Vector2D.linesIntersect(oldPosition, newPositionExtended, lineStart, lineEnd);
+
+		if (collides) {
+			ballDirection = Vector2D.Normalize(new float[] {+1.0f, -1.0f});
+			ballPosition = new float[] {racketPosition[0] + this.bitmapRacket.getWidth() / 2, racketPosition[1] - this.bitmapBall.getHeight()};
+			lives--;
+		}
+		
+		return collides;
 	}
 		
 	private boolean updateBallDirectionOnCollisionWithLine(float[] oldPosition, float[] newPosition, float[] lineStart, float[] lineEnd) {
@@ -228,11 +268,15 @@ public class Game {
 		
 		boolean dirChangedBecauseOfLine = false;
 		float[][][] lines = getRectangleBorderLines(new float[] {0.0f, 0.0f}, displaySize.x - RIGHT_FIX, displaySize.y - STATUS_BAR_HEIGHT);
-				
+		
+		dirChangedBecauseOfLine = updateBallPositionOnCollisionWithBottomLine(oldPosition, newPosition, lines[3][0], lines[3][1]);
+		if (dirChangedBecauseOfLine) {
+			return dirChangedBecauseOfLine;
+		}
+		
 		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[0][0], lines[0][1]) : dirChangedBecauseOfLine;
 		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[1][0], lines[1][1]) : dirChangedBecauseOfLine;
 		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[2][0], lines[2][1]) : dirChangedBecauseOfLine;
-		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[3][0], lines[3][1]) : dirChangedBecauseOfLine;
 		
 		return dirChangedBecauseOfLine;
 	}
@@ -283,7 +327,9 @@ public class Game {
 		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[3][0], lines[3][1]) : dirChangedBecauseOfLine;
 
 		if (dirChangedBecauseOfLine) {
+			this.points += block.blockPoints();
 			block.blockType = BLOCK_TYPE.NONE;
+			visibleBlocks--;
 		}
 		
 		return dirChangedBecauseOfLine;		
@@ -313,6 +359,9 @@ public class Game {
 	}
 	
 	public void updateGame() {
+		
+		racketPosition[0] = Vector2D.Clamp(racketPosition[0] + racketSpeed, 0.0f, displaySize.x - RIGHT_FIX - bitmapRacket.getWidth() );
+		
 		float[] oldPosition = ballPosition;
 		float[] newPosition = Vector2D.Add(ballPosition, Vector2D.MultiplyScalar(ballDirection, ballSpeed));
 		
