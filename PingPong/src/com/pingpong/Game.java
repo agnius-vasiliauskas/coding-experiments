@@ -23,8 +23,8 @@ class Block {
 	public static Bitmap bitmapBlockRed;
 
 	public static final int PROBABILITY_OF_BLOCK = 80;
-	public static final int PROBABILITY_OF_BLOCK_RED = 10;
-	public static final int PROBABILITY_OF_BLOCK_BLUE = 30;	
+	public static final int PROBABILITY_OF_BLOCK_RED = 5;
+	public static final int PROBABILITY_OF_BLOCK_BLUE = 20;	
 	
 	public float[] coords;
 	public BLOCK_TYPE blockType;
@@ -84,8 +84,12 @@ public class Game {
 	public Bitmap bitmapRacket;
 	
 	private final float RIGHT_FIX = 50.0f;
-	public final float paddingX = 40.0f;
-	public final float paddingY = 40.0f;
+	public final float  PADDING_X = 40.0f;
+	public final float  PADDING_Y = 40.0f;
+	
+	private final float SPEED_CHANGE = 0.0001f;
+	private final float SPEED_MIN = 1.0f;
+	private final float SPEED_MAX = 5.0f;
 	
 	public float[]  ballPosition;
 	private float[] ballDirection;
@@ -162,8 +166,8 @@ public class Game {
 		for (int row=0; row < BLOCKS_IN_COLUMN; row++) {
 			
 			for (int column=0; column < BLOCKS_IN_ROW; column++) {
-				float x = paddingX + column * Block.bitmapBlockGreen.getWidth();
-				float y = paddingY + row * Block.bitmapBlockGreen.getHeight();
+				float x = PADDING_X + column * Block.bitmapBlockGreen.getWidth();
+				float y = PADDING_Y + row * Block.bitmapBlockGreen.getHeight();
 				
 				blocks[row][column] = new Block(new float[] {x, y});
 			}
@@ -196,8 +200,8 @@ public class Game {
 		points = 0;
 		visibleBlocks = 0;
 		
-		BLOCKS_IN_ROW = (displaySize.x - (int)RIGHT_FIX - 2 * (int)paddingX) / blockGreen.getWidth();
-		BLOCKS_IN_COLUMN = (displaySize.y - 2 * (int)paddingY - 2 * racket.getHeight() - 2 * ball.getHeight()) / blockGreen.getHeight();
+		BLOCKS_IN_ROW = (displaySize.x - (int)RIGHT_FIX - 2 * (int)PADDING_X) / blockGreen.getWidth();
+		BLOCKS_IN_COLUMN = (displaySize.y - 2 * (int)PADDING_Y - 2 * racket.getHeight() - 2 * ball.getHeight()) / blockGreen.getHeight();
 
 		BLOCKS_IN_ROW = (BLOCKS_IN_ROW % 2 == 0)? BLOCKS_IN_ROW : BLOCKS_IN_ROW - 1;
 		BLOCKS_IN_COLUMN = (BLOCKS_IN_COLUMN % 2 == 0)? BLOCKS_IN_COLUMN : BLOCKS_IN_COLUMN - 1;		
@@ -217,7 +221,7 @@ public class Game {
 		setVisibilityRightBottomQuarterOfBlocks();
 		setVisibilityLeftBottomQuarterOfBlocks();
 		
-		racketPosition = new float[] {(displaySize.x - RIGHT_FIX) / 2 - racket.getWidth() / 2, displaySize.y -  racket.getHeight() - paddingY};
+		racketPosition = new float[] {(displaySize.x - RIGHT_FIX) / 2 - racket.getWidth() / 2, displaySize.y -  racket.getHeight() - PADDING_Y};
 		ballPosition = new float[] {racketPosition[0] + racket.getWidth() / 2, racketPosition[1] - ball.getHeight()};
 	}
 	
@@ -226,6 +230,7 @@ public class Game {
 		boolean collides = Vector2D.linesIntersect(oldPosition, newPositionExtended, lineStart, lineEnd);
 
 		if (collides) {
+			ballSpeed = SPEED_MIN;
 			ballDirection = Vector2D.Normalize(new float[] {+1.0f, -1.0f});
 			ballPosition = new float[] {racketPosition[0] + this.bitmapRacket.getWidth() / 2, racketPosition[1] - this.bitmapBall.getHeight()};
 			lives--;
@@ -323,12 +328,19 @@ public class Game {
 	private boolean dirChangedBecauseOfRacketBorders(float[] oldPosition, float[] newPosition) {
 		
 		boolean dirChangedBecauseOfLine = false;
+		
 		float[][][] lines = getRectangleBorderLines(new float[] {racketPosition[0], racketPosition[1]}, bitmapRacket.getWidth(), bitmapRacket.getHeight());
 
 		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[0][0], lines[0][1]) : dirChangedBecauseOfLine;
 		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[1][0], lines[1][1]) : dirChangedBecauseOfLine;
 		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[2][0], lines[2][1]) : dirChangedBecauseOfLine;
 		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[3][0], lines[3][1]) : dirChangedBecauseOfLine;
+
+		if (dirChangedBecauseOfLine) {
+			final float RACKET_IMPULSE_FACTOR = 0.1f;
+			float[] racketSpeedVec = {RACKET_IMPULSE_FACTOR * racketSpeed, 0.0f};
+			ballDirection = Vector2D.Normalize(Vector2D.Add(ballDirection, racketSpeedVec));
+		}
 		
 		return dirChangedBecauseOfLine;
 	}
@@ -352,8 +364,8 @@ public class Game {
 	}
 	
 	private boolean dirChangedBecauseOfBlockGrid(float[] oldPosition, float[] newPosition) {
-		int colCurrent = ((int)newPosition[0] - (int)paddingX) / Block.bitmapBlockGreen.getWidth();
-		int rowCurrent = ((int)newPosition[1] - (int)paddingY) / Block.bitmapBlockGreen.getHeight();
+		int colCurrent = ((int)newPosition[0] - (int)PADDING_X) / Block.bitmapBlockGreen.getWidth();
+		int rowCurrent = ((int)newPosition[1] - (int)PADDING_Y) / Block.bitmapBlockGreen.getHeight();
 		final int BLOCK_COUNT = 2;
 		
 		for (int row = rowCurrent - BLOCK_COUNT; row < rowCurrent + BLOCK_COUNT + 1; row++) {
@@ -374,11 +386,18 @@ public class Game {
 		return false;	
 	}
 	
-	public void updateGame() {
+	private boolean isBallInsideRacket(float newRacketX) {
+		return ballPosition[0] + bitmapBall.getWidth() / 2  > newRacketX && 
+			   ballPosition[0] - bitmapBall.getWidth() / 2 < newRacketX + bitmapRacket.getWidth() &&
+			   ballPosition[1] > racketPosition[1] && 
+			   ballPosition[1] < racketPosition[1] + bitmapRacket.getHeight();
+	}
+	
+	public void updateGame() {		
 		
-		racketPosition[0] = Vector2D.Clamp(racketPosition[0] + racketSpeed, 0.0f, displaySize.x - RIGHT_FIX - bitmapRacket.getWidth() );
+		ballSpeed = Vector2D.Clamp(ballSpeed + SPEED_CHANGE, SPEED_MIN, SPEED_MAX);
 		
-		float[] oldPosition = ballPosition;
+		float[] oldPosition =  Arrays.copyOf(ballPosition, ballPosition.length);
 		float[] newPosition = Vector2D.Add(ballPosition, Vector2D.MultiplyScalar(ballDirection, ballSpeed));
 		
 		boolean dirChangedBecauseOfLine = false;
@@ -388,5 +407,11 @@ public class Game {
 				
 		if (!dirChangedBecauseOfLine)
 			ballPosition = newPosition;
+		
+		float newRacketX = Vector2D.Clamp(racketPosition[0] + racketSpeed, 0.0f, displaySize.x - RIGHT_FIX - bitmapRacket.getWidth() );
+		boolean isBallInside = isBallInsideRacket(newRacketX);
+		if (!isBallInside)
+			racketPosition[0] = newRacketX;
+		
 	}
 }
