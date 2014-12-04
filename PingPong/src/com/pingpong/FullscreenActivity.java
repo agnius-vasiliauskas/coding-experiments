@@ -89,6 +89,13 @@ public class FullscreenActivity extends Activity {
         
     }
     
+    private void initializeNewGame(boolean isDemo) {
+        game = new Game(displaySizeForGame, ball, racket, blockGreen, blockBlue, blockRed, isDemo);
+        sketchView.setGame(game);
+        programState.setGameObject(game);
+		programState.setProgramState(State.STATE_GAME_PROCESS);    	
+    }
+    
     private void setupUiInteraction() {
     	
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -102,30 +109,19 @@ public class FullscreenActivity extends Activity {
                 	// update program state
                 	if (programState.getProgramState() == State.STATE_GAME_NO_GAME || 
                 		programState.getProgramState() == State.STATE_GAME_END) {
-                		
-                        game = new Game(displaySizeForGame, ball, racket, blockGreen, blockBlue, blockRed);
-                        sketchView.setGame(game);
-                        programState.setGameObject(game);
-                		programState.setProgramState(State.STATE_GAME_PROCESS);
+                		initializeNewGame(false);
                 	}
                 	else if (programState.getProgramState() == State.STATE_GAME_PROCESS) {
-                    	// update racket speed
-                    	float[] hitCoords = {event.getX(), event.getY()};
-                    	
-                    	float newRacketSpeed = 0.0f;
-                    	if (hitCoords[0] > game.racketPosition[0] + game.bitmapRacket.getWidth() / 2)
-                    		newRacketSpeed = +2.0f;
-                    	else if (hitCoords[0] < game.racketPosition[0] + game.bitmapRacket.getWidth() / 2)
-                    		newRacketSpeed = -2.0f;
-                    	
-                    	if (newRacketSpeed != 0.0f)
-                    		game.racketSpeed = newRacketSpeed;
+                    	if (game.isDemo)
+                    		initializeNewGame(false);
+                    	else
+                    		game.setRacketSpeed(event.getX());
                 	}
                 	
                 }
                 else if (event.getAction() == MotionEvent.ACTION_UP) {
                 	if (programState.getProgramState() == State.STATE_GAME_PROCESS) {
-                		game.racketSpeed = 0.0f;
+                		game.setRacketSpeedToZero();
                 	}
                 }
                 
@@ -142,6 +138,11 @@ public class FullscreenActivity extends Activity {
         new Thread() {
             public void run() {
             	while (true) {
+            		
+                	if (programState.getProgramState() == ProgramState.State.STATE_GAME_NO_GAME || 
+                    	programState.getProgramState() == ProgramState.State.STATE_GAME_END) {
+                    		initializeNewGame(true);
+                    }
             		
              		try {
                 		Thread.sleep(10);	            		
