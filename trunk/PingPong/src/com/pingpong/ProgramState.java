@@ -58,7 +58,8 @@ public class ProgramState {
 				break;
 
 			case STATE_GAME_PROCESS:
-				sketchView.setMessages(null, null);
+				if (!game.isDemo) 
+					sketchView.setMessages(null, null);
 				sketchView.setGameMode(true);
 				break;				
 				

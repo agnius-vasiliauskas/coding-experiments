@@ -72,6 +72,7 @@ public class Game {
 	public int STATUS_BAR_HEIGHT;
 	
 	public Point displaySize;
+	public boolean isDemo;
 	private Random random;
 	
 	public Block[][] blocks = null;
@@ -86,8 +87,9 @@ public class Game {
 	private final float RIGHT_FIX = 50.0f;
 	public final float  PADDING_X = 40.0f;
 	public final float  PADDING_Y = 40.0f;
+	private final float  RACKET_SPEED = 2.0f;
 	
-	private final float SPEED_CHANGE = 0.0001f;
+	private final float SPEED_CHANGE = 0.0002f;
 	private final float SPEED_MIN = 1.0f;
 	private final float SPEED_MAX = 5.0f;
 	
@@ -96,7 +98,7 @@ public class Game {
 	private float   ballSpeed;
 	
 	public float[] racketPosition;
-	public float   racketSpeed;
+	private float  racketSpeed;
 	
 	private void setVisibilityLeftTopQuarterOfBlocks() {
 		
@@ -185,9 +187,27 @@ public class Game {
 		
 		return GAME_RESULT.NONE;
 	}
+	
+	public void setRacketSpeed(float hitX) {
 		
-	public Game(Point displaySize, Bitmap ball, Bitmap racket, Bitmap blockGreen, Bitmap blockBlue, Bitmap blockRed) {
+    	float newRacketSpeed = 0.0f;
+    	
+    	if (hitX > this.racketPosition[0] + this.bitmapRacket.getWidth() / 2)
+    		newRacketSpeed = + this.RACKET_SPEED;
+    	else if (hitX < this.racketPosition[0] + this.bitmapRacket.getWidth() / 2)
+    		newRacketSpeed = - this.RACKET_SPEED;
+    	
+    	this.racketSpeed = newRacketSpeed;		
+	}
+	
+	public void setRacketSpeedToZero() {
+    	this.racketSpeed = 0.0f;
+	}
+		
+	public Game(Point displaySize, Bitmap ball, Bitmap racket, Bitmap blockGreen, Bitmap blockBlue, Bitmap blockRed, boolean isDemo) {
 		STATUS_BAR_HEIGHT = 25;
+		
+		this.isDemo = isDemo;
 		
 		ballDirection = Vector2D.Normalize(new float[] {+1.0f, -1.0f});
 		ballSpeed = 1.0f;
@@ -407,6 +427,9 @@ public class Game {
 				
 		if (!dirChangedBecauseOfLine)
 			ballPosition = newPosition;
+		
+		if (isDemo)
+			this.setRacketSpeed(ballPosition[0]);
 		
 		float newRacketX = Vector2D.Clamp(racketPosition[0] + racketSpeed, 0.0f, displaySize.x - RIGHT_FIX - bitmapRacket.getWidth() );
 		boolean isBallInside = isBallInsideRacket(newRacketX);
