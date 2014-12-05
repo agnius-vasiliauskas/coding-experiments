@@ -25,7 +25,6 @@ public class FullscreenActivity extends Activity {
     
     // game resources
     private static Bitmap ball;
-    private static Bitmap racket;
     private static Bitmap blockGreen;
     private static Bitmap blockBlue;
     private static Bitmap blockRed;
@@ -81,7 +80,6 @@ public class FullscreenActivity extends Activity {
         
         // setup game resources
         ball =       getBitmapResource(0);
-        racket =     getBitmapResource(5);
         blockGreen = getBitmapResource(1);
         blockBlue =  getBitmapResource(2);
         blockRed =   getBitmapResource(3);        
@@ -90,7 +88,7 @@ public class FullscreenActivity extends Activity {
     }
     
     private void initializeNewGame(boolean isDemo) {
-        game = new Game(displaySizeForGame, ball, racket, blockGreen, blockBlue, blockRed, isDemo);
+        game = new Game(displaySizeForGame, ball, blockGreen, blockBlue, blockRed, isDemo);
         sketchView.setGame(game);
         programState.setGameObject(game);
 		programState.setProgramState(State.STATE_GAME_PROCESS);    	
