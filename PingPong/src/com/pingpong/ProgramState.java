@@ -39,7 +39,6 @@ public class ProgramState {
 	
 	public synchronized void setProgramState(State state) {
 
-		State oldState = this.state;
 		this.state = state;
 
 		// business logics of application
