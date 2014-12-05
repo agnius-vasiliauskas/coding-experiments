@@ -1,5 +1,6 @@
 package com.pingpong;
 
+import com.pingpong.Block.BLOCK_TYPE;
 import com.pingpong.Game.GAME_RESULT;
 
 import android.content.*;
@@ -47,7 +48,7 @@ public class SketchView extends View {
 		}		
 		if (paintStateText == null) {
 			paintStateText = new Paint();
-			paintStateText.setColor(textColor);
+			paintStateText.setColor(0xff000000);
 			paintStateText.setStrokeWidth(2);
 			paintStateText.setStyle(Style.FILL);
 			paintStateText.setAntiAlias(true);
@@ -123,19 +124,32 @@ public class SketchView extends View {
 		if (game == null || !isGameMode)
 			return;
 		
+		if (Block.bonusTextBounds == null) {
+			Block.bonusTextBounds = new Rect[] {new Rect(), new Rect()};
+			paintText.getTextBounds(Block.STRING_MINUS, 0, Block.STRING_MINUS.length(), Block.bonusTextBounds[0]);
+			paintText.getTextBounds(Block.STRING_PLUS,  0, Block.STRING_PLUS.length(),  Block.bonusTextBounds[1]);
+		}
+		
 		for (int row=0; row < game.BLOCKS_IN_COLUMN; row++) {
 			
 			for (int column=0; column < game.BLOCKS_IN_ROW; column++) {				
 				Block block = game.blocks[row][column];
 				Bitmap blockImage = block.blockImage();
+				
 				if (blockImage != null) {
 					canvas.drawBitmap(blockImage, block.coords[0], block.coords[1], paint);
 				}
+				
+				if (block.blockType == BLOCK_TYPE.NONE && block.coordsText[1] > 0)
+					canvas.drawText(block.blockText, block.coordsText[0], block.coordsText[1], paintStateText);
+				
+				if (block.blockTextBonus.length() > 0 && block.coordsTextBonus != null)
+					canvas.drawText(block.blockTextBonus, block.coordsTextBonus[0], block.coordsTextBonus[1], paintText);
 			}
 			
 		}
 		
-		canvas.drawBitmap(game.bitmapRacket, game.racketPosition[0], game.racketPosition[1], paint);
+		canvas.drawRect(game.racketPosition[0], game.racketPosition[1], game.racketPosition[0] + game.racketSize.x, game.racketPosition[1] + game.racketSize.y, paintText);
 		
 		if (game.getGameResult() == GAME_RESULT.NONE)
 			canvas.drawBitmap(game.bitmapBall, game.ballPosition[0] - game.bitmapBall.getWidth() / 2, game.ballPosition[1] - game.bitmapBall.getHeight() / 2, paint);

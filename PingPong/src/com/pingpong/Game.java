@@ -1,13 +1,16 @@
 package com.pingpong;
 
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.Random;
 
 import com.pingpong.Block.BLOCK_TYPE;
+import com.pingpong.Block.BONUS_TYPE;
 import com.pingpong.Vector2D.LINE_TYPE;
 
 import android.graphics.Bitmap;
 import android.graphics.Point;
+import android.graphics.Rect;
 
 class Block {
 	
@@ -17,6 +20,12 @@ class Block {
 		RED,
 		NONE
 	}
+	
+	public enum BONUS_TYPE {
+		NONE,
+		PLUS,
+		MINUS
+	}
 		
 	public static Bitmap bitmapBlockGreen;
 	public static Bitmap bitmapBlockBlue;
@@ -25,9 +34,23 @@ class Block {
 	public static final int PROBABILITY_OF_BLOCK = 80;
 	public static final int PROBABILITY_OF_BLOCK_RED = 5;
 	public static final int PROBABILITY_OF_BLOCK_BLUE = 20;	
+
+	public static final int PROBABILITY_OF_BONUS = 40;
+	public static final int PROBABILITY_OF_BONUS_MINUS = 30;	
+	
+	public static final String STRING_MINUS = "-";
+	public static final String STRING_PLUS =  "+";
+	
+	public static Rect[] bonusTextBounds = null;
 	
 	public float[] coords;
+	public float[] coordsText;
+	public float[] coordsTextBonus;
+	public String  blockText;
+	public String  blockTextBonus;
+	
 	public BLOCK_TYPE blockType;
+	public BONUS_TYPE blockBonus;
 	
 	public Block(float[] coords) {
 		this.blockType = BLOCK_TYPE.NONE;
@@ -57,6 +80,29 @@ class Block {
 		
 		return 0;
 	}
+	
+	public String blockBonusText() {
+		
+		if (blockBonus == BONUS_TYPE.MINUS)
+			return STRING_MINUS;
+		else if (blockBonus == BONUS_TYPE.PLUS)
+			return STRING_PLUS;
+		else 
+			return "";
+	}
+	
+	public Rect blockBonusBounds() {
+		
+		if (bonusTextBounds == null)
+			return null;
+		
+		if (blockBonus == BONUS_TYPE.MINUS)
+			return bonusTextBounds[0];
+		else if (blockBonus == BONUS_TYPE.PLUS)
+			return bonusTextBounds[1];
+		else 
+			return null;
+	}
 }
 
 public class Game {
@@ -76,18 +122,23 @@ public class Game {
 	private Random random;
 	
 	public Block[][] blocks = null;
+	public LinkedList<Block> unvisibleBlocksForPoints = null;
+	public LinkedList<Block> unvisibleBlocksForBonus = null;
 	
 	public int lives;
 	public int points;
 	public int visibleBlocks;
 	
 	public Bitmap bitmapBall;
-	public Bitmap bitmapRacket;
 	
 	private final float RIGHT_FIX = 50.0f;
 	public final float  PADDING_X = 40.0f;
 	public final float  PADDING_Y = 40.0f;
+
 	private final float  RACKET_SPEED = 2.0f;
+	private final Point  RACKET_SIZE = new Point(80, 20);
+	private final int    RACKET_WIDTH_CHANGE = 5;
+	private final int    RACKET_WIDTH_CHANGE_MAX = 50;
 	
 	private final float SPEED_CHANGE = 0.0002f;
 	private final float SPEED_MIN = 1.0f;
@@ -98,6 +149,7 @@ public class Game {
 	private float   ballSpeed;
 	
 	public float[] racketPosition;
+	public Point   racketSize;
 	private float  racketSpeed;
 	
 	private void setVisibilityLeftTopQuarterOfBlocks() {
@@ -172,6 +224,21 @@ public class Game {
 				float y = PADDING_Y + row * Block.bitmapBlockGreen.getHeight();
 				
 				blocks[row][column] = new Block(new float[] {x, y});
+				blocks[row][column].coordsText = new float[] {0.0f, -100.0f};
+				blocks[row][column].blockText = "";
+				
+				if (random.nextInt(101) <= Block.PROBABILITY_OF_BONUS) {
+					int rnd = random.nextInt(101);
+					if (rnd <= Block.PROBABILITY_OF_BONUS_MINUS)
+						blocks[row][column].blockBonus = BONUS_TYPE.MINUS;
+					else
+						blocks[row][column].blockBonus = BONUS_TYPE.PLUS;
+				}
+				else {
+					blocks[row][column].blockBonus = BONUS_TYPE.NONE;
+				}
+				
+				blocks[row][column].blockTextBonus = "";
 			}
 			
 		}
@@ -192,9 +259,9 @@ public class Game {
 		
     	float newRacketSpeed = 0.0f;
     	
-    	if (hitX > this.racketPosition[0] + this.bitmapRacket.getWidth() / 2)
+    	if (hitX > this.racketPosition[0] + this.racketSize.x / 2)
     		newRacketSpeed = + this.RACKET_SPEED;
-    	else if (hitX < this.racketPosition[0] + this.bitmapRacket.getWidth() / 2)
+    	else if (hitX < this.racketPosition[0] + this.racketSize.x / 2)
     		newRacketSpeed = - this.RACKET_SPEED;
     	
     	this.racketSpeed = newRacketSpeed;		
@@ -204,8 +271,11 @@ public class Game {
     	this.racketSpeed = 0.0f;
 	}
 		
-	public Game(Point displaySize, Bitmap ball, Bitmap racket, Bitmap blockGreen, Bitmap blockBlue, Bitmap blockRed, boolean isDemo) {
+	public Game(Point displaySize, Bitmap ball, Bitmap blockGreen, Bitmap blockBlue, Bitmap blockRed, boolean isDemo) {
 		STATUS_BAR_HEIGHT = 25;
+		
+		unvisibleBlocksForPoints = new LinkedList<>();
+		unvisibleBlocksForBonus = new LinkedList<>();
 		
 		this.isDemo = isDemo;
 		
@@ -213,6 +283,7 @@ public class Game {
 		ballSpeed = 1.0f;
 		
 		racketSpeed = 0.0f;
+		racketSize = RACKET_SIZE;
 		
 		random = new Random();
 		
@@ -221,7 +292,7 @@ public class Game {
 		visibleBlocks = 0;
 		
 		BLOCKS_IN_ROW = (displaySize.x - (int)RIGHT_FIX - 2 * (int)PADDING_X) / blockGreen.getWidth();
-		BLOCKS_IN_COLUMN = (displaySize.y - 2 * (int)PADDING_Y - 2 * racket.getHeight() - 2 * ball.getHeight()) / blockGreen.getHeight();
+		BLOCKS_IN_COLUMN = (displaySize.y - 2 * (int)PADDING_Y - 2 * racketSize.y - 2 * ball.getHeight()) / blockGreen.getHeight();
 
 		BLOCKS_IN_ROW = (BLOCKS_IN_ROW % 2 == 0)? BLOCKS_IN_ROW : BLOCKS_IN_ROW - 1;
 		BLOCKS_IN_COLUMN = (BLOCKS_IN_COLUMN % 2 == 0)? BLOCKS_IN_COLUMN : BLOCKS_IN_COLUMN - 1;		
@@ -230,7 +301,6 @@ public class Game {
 		
 		this.displaySize = displaySize;
 		this.bitmapBall = ball;
-		this.bitmapRacket = racket;
 		Block.bitmapBlockGreen = blockGreen;
 		Block.bitmapBlockBlue = blockBlue;
 		Block.bitmapBlockRed = blockRed;
@@ -241,8 +311,8 @@ public class Game {
 		setVisibilityRightBottomQuarterOfBlocks();
 		setVisibilityLeftBottomQuarterOfBlocks();
 		
-		racketPosition = new float[] {(displaySize.x - RIGHT_FIX) / 2 - racket.getWidth() / 2, displaySize.y -  racket.getHeight() - PADDING_Y};
-		ballPosition = new float[] {racketPosition[0] + racket.getWidth() / 2, racketPosition[1] - ball.getHeight()};
+		racketPosition = new float[] {(displaySize.x - RIGHT_FIX) / 2 - racketSize.x / 2, displaySize.y -  racketSize.y - PADDING_Y};
+		ballPosition = new float[] {racketPosition[0] + racketSize.x / 2, racketPosition[1] - ball.getHeight()};
 	}
 	
 	private boolean updateBallPositionOnCollisionWithBottomLine(float[] oldPosition, float[] newPosition, float[] lineStart, float[] lineEnd) {
@@ -250,9 +320,10 @@ public class Game {
 		boolean collides = Vector2D.linesIntersect(oldPosition, newPositionExtended, lineStart, lineEnd);
 
 		if (collides) {
+			racketSize = RACKET_SIZE;
 			ballSpeed = SPEED_MIN;
 			ballDirection = Vector2D.Normalize(new float[] {+1.0f, -1.0f});
-			ballPosition = new float[] {racketPosition[0] + this.bitmapRacket.getWidth() / 2, racketPosition[1] - this.bitmapBall.getHeight()};
+			ballPosition = new float[] {racketPosition[0] + this.racketSize.x / 2, racketPosition[1] - this.bitmapBall.getHeight()};
 			lives--;
 		}
 		
@@ -349,7 +420,7 @@ public class Game {
 		
 		boolean dirChangedBecauseOfLine = false;
 		
-		float[][][] lines = getRectangleBorderLines(new float[] {racketPosition[0], racketPosition[1]}, bitmapRacket.getWidth(), bitmapRacket.getHeight());
+		float[][][] lines = getRectangleBorderLines(new float[] {racketPosition[0], racketPosition[1]}, racketSize.x, racketSize.y);
 
 		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[0][0], lines[0][1]) : dirChangedBecauseOfLine;
 		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[1][0], lines[1][1]) : dirChangedBecauseOfLine;
@@ -375,8 +446,14 @@ public class Game {
 		dirChangedBecauseOfLine = (!dirChangedBecauseOfLine)? updateBallDirectionOnCollisionWithLine(oldPosition, newPosition, lines[3][0], lines[3][1]) : dirChangedBecauseOfLine;
 
 		if (dirChangedBecauseOfLine) {
-			this.points += block.blockPoints();
+			unvisibleBlocksForPoints.add(block);
+			unvisibleBlocksForBonus.add(block);
+			points += block.blockPoints();
+			block.blockText = String.format("%d", block.blockPoints());
 			block.blockType = BLOCK_TYPE.NONE;
+			block.coordsText = 		Arrays.copyOf(block.coords, block.coords.length);
+			block.coordsTextBonus = Arrays.copyOf(block.coords, block.coords.length);
+			block.blockTextBonus = block.blockBonusText();
 			visibleBlocks--;
 		}
 		
@@ -408,13 +485,70 @@ public class Game {
 	
 	private boolean isBallInsideRacket(float newRacketX) {
 		return ballPosition[0] + bitmapBall.getWidth() / 2  > newRacketX && 
-			   ballPosition[0] - bitmapBall.getWidth() / 2 < newRacketX + bitmapRacket.getWidth() &&
+			   ballPosition[0] - bitmapBall.getWidth() / 2 < newRacketX + racketSize.x &&
 			   ballPosition[1] > racketPosition[1] && 
-			   ballPosition[1] < racketPosition[1] + bitmapRacket.getHeight();
+			   ballPosition[1] < racketPosition[1] + racketSize.y;
 	}
 	
-	public void updateGame() {		
+	private boolean isBonusMarkerInsideRacket(float newRacketX, Block block) {
+		Rect bonusBounds = block.blockBonusBounds();
+		if (bonusBounds == null)
+			return false;
+		if (block.blockBonus == BONUS_TYPE.NONE)
+			return false;
+
+		float yPad = (block.blockBonus == BONUS_TYPE.MINUS)? 8.0f : 4.0f;
 		
+		return  block.coordsTextBonus[0] + bonusBounds.width() > newRacketX && 
+				block.coordsTextBonus[0] < newRacketX + racketSize.x &&
+				block.coordsTextBonus[1] - yPad > racketPosition[1] && 
+				block.coordsTextBonus[1] + yPad < racketPosition[1] + racketSize.y;
+	}
+	
+	private void updateUnvisibleBlocksForPoints() {
+		LinkedList<Block> deletableBlocks = new LinkedList<>();
+		
+		for (Block b : unvisibleBlocksForPoints)
+			if (b.coordsText[1] < 0)
+				deletableBlocks.add(b);
+		
+		unvisibleBlocksForPoints.removeAll(deletableBlocks);
+
+		final float TEXT_POS_CHANGE = 2.0f;
+		for (Block b : unvisibleBlocksForPoints)
+			b.coordsText[1] -= TEXT_POS_CHANGE;
+		
+	}
+
+	private void updateUnvisibleBlocksForBonus(float newRacketX) {
+		LinkedList<Block> deletableBlocks = new LinkedList<>();
+		
+		for (Block b : unvisibleBlocksForBonus) {
+			boolean isBonusInsideRacket = isBonusMarkerInsideRacket(newRacketX, b);
+			if (b.coordsText[1] > displaySize.y || isBonusInsideRacket) {
+				if (isBonusInsideRacket) {
+					int sign = (b.blockBonus == BONUS_TYPE.MINUS)? -1 : +1;
+					int newRacketWidth = racketSize.x + sign * RACKET_WIDTH_CHANGE;
+					newRacketWidth = Vector2D.Clamp(newRacketWidth, 
+													RACKET_SIZE.x - RACKET_WIDTH_CHANGE_MAX , 
+													RACKET_SIZE.x + RACKET_WIDTH_CHANGE_MAX);
+					racketSize = new Point(newRacketWidth, racketSize.y);
+				}
+				b.blockTextBonus = "";
+				deletableBlocks.add(b);
+			}
+		}
+		
+		unvisibleBlocksForBonus.removeAll(deletableBlocks);
+
+		final float TEXT_POS_CHANGE = 1.0f;
+		for (Block b : unvisibleBlocksForBonus)
+			b.coordsTextBonus[1] += TEXT_POS_CHANGE;
+		
+	}
+	
+	public void updateGame() {	
+				
 		ballSpeed = Vector2D.Clamp(ballSpeed + SPEED_CHANGE, SPEED_MIN, SPEED_MAX);
 		
 		float[] oldPosition =  Arrays.copyOf(ballPosition, ballPosition.length);
@@ -431,10 +565,12 @@ public class Game {
 		if (isDemo)
 			this.setRacketSpeed(ballPosition[0]);
 		
-		float newRacketX = Vector2D.Clamp(racketPosition[0] + racketSpeed, 0.0f, displaySize.x - RIGHT_FIX - bitmapRacket.getWidth() );
-		boolean isBallInside = isBallInsideRacket(newRacketX);
-		if (!isBallInside)
-			racketPosition[0] = newRacketX;
+		float newRacketX = Vector2D.Clamp(racketPosition[0] + racketSpeed, 0.0f, displaySize.x - RIGHT_FIX - racketSize.x );
 		
+		updateUnvisibleBlocksForPoints();
+		updateUnvisibleBlocksForBonus(newRacketX);
+		
+		if (!isBallInsideRacket(newRacketX))
+			racketPosition[0] = newRacketX;
 	}
 }
