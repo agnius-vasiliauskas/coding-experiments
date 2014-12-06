@@ -120,6 +120,7 @@ public class Game {
 	public Point displaySize;
 	public boolean isDemo;
 	private Random random;
+	public boolean isGameStarted;
 	
 	public Block[][] blocks = null;
 	public LinkedList<Block> unvisibleBlocksForPoints = null;
@@ -131,9 +132,8 @@ public class Game {
 	
 	public Bitmap bitmapBall;
 	
-	private final float RIGHT_FIX = 50.0f;
-	public final float  PADDING_X = 40.0f;
-	public final float  PADDING_Y = 40.0f;
+	private float PADDING_X;
+	private float PADDING_Y;
 
 	private final float  RACKET_SPEED = 2.0f;
 	private final Point  RACKET_SIZE = new Point(80, 20);
@@ -247,6 +247,9 @@ public class Game {
 		
 	public GAME_RESULT getGameResult() {
 		
+		if (!isGameStarted)
+			return GAME_RESULT.NONE;
+		
 		if (lives == -1)
 			return GAME_RESULT.LOOSE;
 		else if (visibleBlocks == 0)
@@ -270,14 +273,12 @@ public class Game {
 	public void setRacketSpeedToZero() {
     	this.racketSpeed = 0.0f;
 	}
-		
-	public Game(Point displaySize, Bitmap ball, Bitmap blockGreen, Bitmap blockBlue, Bitmap blockRed, boolean isDemo) {
+	
+	private void startGame() {
 		STATUS_BAR_HEIGHT = 25;
 		
 		unvisibleBlocksForPoints = new LinkedList<>();
 		unvisibleBlocksForBonus = new LinkedList<>();
-		
-		this.isDemo = isDemo;
 		
 		ballDirection = Vector2D.Normalize(new float[] {+1.0f, -1.0f});
 		ballSpeed = 1.0f;
@@ -291,28 +292,43 @@ public class Game {
 		points = 0;
 		visibleBlocks = 0;
 		
-		BLOCKS_IN_ROW = (displaySize.x - (int)RIGHT_FIX - 2 * (int)PADDING_X) / blockGreen.getWidth();
-		BLOCKS_IN_COLUMN = (displaySize.y - 2 * (int)PADDING_Y - 2 * racketSize.y - 2 * ball.getHeight()) / blockGreen.getHeight();
+		BLOCKS_IN_ROW = (displaySize.x - 2 * (int)PADDING_X) / Block.bitmapBlockGreen.getWidth();
+		BLOCKS_IN_COLUMN = (displaySize.y - 2 * (int)PADDING_Y - 2 * racketSize.y - 2 * bitmapBall.getHeight()) / Block.bitmapBlockGreen.getHeight();
 
 		BLOCKS_IN_ROW = (BLOCKS_IN_ROW % 2 == 0)? BLOCKS_IN_ROW : BLOCKS_IN_ROW - 1;
 		BLOCKS_IN_COLUMN = (BLOCKS_IN_COLUMN % 2 == 0)? BLOCKS_IN_COLUMN : BLOCKS_IN_COLUMN - 1;		
 		
 		blocks = new Block[BLOCKS_IN_COLUMN][BLOCKS_IN_ROW];
-		
-		this.displaySize = displaySize;
-		this.bitmapBall = ball;
-		Block.bitmapBlockGreen = blockGreen;
-		Block.bitmapBlockBlue = blockBlue;
-		Block.bitmapBlockRed = blockRed;
-		
+				
 		generateBlocks();
 		setVisibilityLeftTopQuarterOfBlocks();
 		setVisibilityRightTopQuarterOfBlocks();
 		setVisibilityRightBottomQuarterOfBlocks();
 		setVisibilityLeftBottomQuarterOfBlocks();
 		
-		racketPosition = new float[] {(displaySize.x - RIGHT_FIX) / 2 - racketSize.x / 2, displaySize.y -  racketSize.y - PADDING_Y};
-		ballPosition = new float[] {racketPosition[0] + racketSize.x / 2, racketPosition[1] - ball.getHeight()};
+		racketPosition = new float[] {displaySize.x / 2 - racketSize.x / 2, displaySize.y -  racketSize.y - PADDING_Y};
+		ballPosition = new float[] {racketPosition[0] + racketSize.x / 2, racketPosition[1] - bitmapBall.getHeight()};		
+		
+		isGameStarted = true;
+	}
+	
+	public void setDisplaySize(Point displaySize) {
+		this.displaySize = displaySize;
+	}
+	
+	public Game(Bitmap ball, Bitmap blockGreen, Bitmap blockBlue, Bitmap blockRed, boolean isDemo) {
+		
+		this.PADDING_X = 2.0f * blockGreen.getWidth();
+		this.PADDING_Y = 2.0f * blockGreen.getHeight();
+
+		this.displaySize = null;
+		this.bitmapBall = ball;
+		this.isDemo = isDemo;
+		this.isGameStarted = false;
+
+		Block.bitmapBlockGreen = blockGreen;
+		Block.bitmapBlockBlue = blockBlue;
+		Block.bitmapBlockRed = blockRed;
 	}
 	
 	private boolean updateBallPositionOnCollisionWithBottomLine(float[] oldPosition, float[] newPosition, float[] lineStart, float[] lineEnd) {
@@ -379,7 +395,7 @@ public class Game {
 	private boolean dirChangedBecauseOfScreenBorders(float[] oldPosition, float[] newPosition) {
 		
 		boolean dirChangedBecauseOfLine = false;
-		float[][][] lines = getRectangleBorderLines(new float[] {0.0f, 0.0f}, displaySize.x - RIGHT_FIX, displaySize.y - STATUS_BAR_HEIGHT);
+		float[][][] lines = getRectangleBorderLines(new float[] {0.0f, 0.0f}, displaySize.x, displaySize.y - STATUS_BAR_HEIGHT);
 		
 		dirChangedBecauseOfLine = updateBallPositionOnCollisionWithBottomLine(oldPosition, newPosition, lines[3][0], lines[3][1]);
 		if (dirChangedBecauseOfLine) {
@@ -548,7 +564,15 @@ public class Game {
 	}
 	
 	public void updateGame() {	
-				
+		
+		if (displaySize == null)
+			return;
+		
+		if (!isGameStarted) {
+			startGame();
+			return;
+		}
+
 		ballSpeed = Vector2D.Clamp(ballSpeed + SPEED_CHANGE, SPEED_MIN, SPEED_MAX);
 		
 		float[] oldPosition =  Arrays.copyOf(ballPosition, ballPosition.length);
@@ -565,7 +589,7 @@ public class Game {
 		if (isDemo)
 			this.setRacketSpeed(ballPosition[0]);
 		
-		float newRacketX = Vector2D.Clamp(racketPosition[0] + racketSpeed, 0.0f, displaySize.x - RIGHT_FIX - racketSize.x );
+		float newRacketX = Vector2D.Clamp(racketPosition[0] + racketSpeed, 0.0f, displaySize.x - racketSize.x );
 		
 		updateUnvisibleBlocksForPoints();
 		updateUnvisibleBlocksForBonus(newRacketX);
