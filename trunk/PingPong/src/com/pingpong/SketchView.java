@@ -124,12 +124,19 @@ public class SketchView extends View {
 		if (game == null || !isGameMode)
 			return;
 		
+		if (game.displaySize == null) {
+			game.displaySize = new Point(canvas.getWidth(), canvas.getHeight());
+		}
+		
 		if (Block.bonusTextBounds == null) {
 			Block.bonusTextBounds = new Rect[] {new Rect(), new Rect()};
 			paintText.getTextBounds(Block.STRING_MINUS, 0, Block.STRING_MINUS.length(), Block.bonusTextBounds[0]);
 			paintText.getTextBounds(Block.STRING_PLUS,  0, Block.STRING_PLUS.length(),  Block.bonusTextBounds[1]);
 		}
 		
+		if (!game.isGameStarted)
+			return;
+				
 		for (int row=0; row < game.BLOCKS_IN_COLUMN; row++) {
 			
 			for (int column=0; column < game.BLOCKS_IN_ROW; column++) {				
