@@ -10,6 +10,11 @@
                     while ((p=strchr(p,n))!=NULL) {*p = r;}}
 
 typedef struct {
+    unsigned int x;
+    unsigned int y;
+} Koordinate;
+
+typedef struct {
  const unsigned int plotis;
  const unsigned int aukstis;
  unsigned char ** const pikseliai;
