@@ -10,8 +10,8 @@
                     while ((p=strchr(p,n))!=NULL) {*p = r;}}
 
 typedef struct {
-    unsigned int x;
-    unsigned int y;
+    int x;
+    int y;
 } Koordinate;
 
 typedef struct {
