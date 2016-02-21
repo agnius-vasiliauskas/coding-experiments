@@ -74,7 +74,7 @@ void pgm_sukurti(Pgm * pgm, unsigned int plotis, unsigned int aukstis, unsigned 
         printf("Nenurodyta struktura !\n");
         return;
     }
-    if (pgm->aukstis == 0 || pgm->plotis == 0) {
+    if (aukstis == 0 || plotis == 0) {
         printf("Nenurodytas aukstis ar plotis!\n");
         return;
     }
