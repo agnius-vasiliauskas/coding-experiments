@@ -9,6 +9,8 @@
 #define pakeisti_nepageidaujama_simboli(e,n,r) {char * p = e;\
                     while ((p=strchr(p,n))!=NULL) {*p = r;}}
 
+#define PI 3.14159265359
+
 typedef struct {
     int x;
     int y;
@@ -20,13 +22,52 @@ typedef struct {
  unsigned char ** const pikseliai;
 } Pgm;
 
+/// daznu funkciju prototipai
+void koordDekartoIpoline(float x, float y, float * r, float * a);
+void koordPolineIDekarto(float r, float a, float * x, float * y);
+int apribotiRezius(int x, int a, int b);
+int sulietiDviSpalvas(unsigned char a, unsigned int b, double koeficentas);
+
 /// pgm prototipai
+void pgm_nukopijuoti(Pgm * pgmIs, Pgm * pgmI);
 void pgm_nuskaityti(Pgm * pgm, char * paveiksliukoByla);
 void pgm_irasyti(Pgm * pgm, char * paveiksliukoByla);
 void pgm_sukurti(Pgm * pgm, unsigned int plotis, unsigned int aukstis, unsigned char fonas);
 void pgm_atlaisvinti(Pgm * pgm);
 
+/// Daznu funkciju kodas
+
+void koordDekartoIpoline(float x, float y, float * r, float * a) {
+    *r = sqrt(x*x + y*y);
+    *a = atan2(y,x);
+}
+
+void koordPolineIDekarto(float r, float a, float * x, float * y) {
+    *x = r * cos(a);
+    *y = r * sin(a);
+}
+
+int apribotiRezius(int x, int a, int b) {
+    return x < a ? a : x > b ? b : x;
+}
+
+int sulietiDviSpalvas(unsigned char a, unsigned int b, double koeficentas) {
+    return b*koeficentas + a*(1. - koeficentas);
+}
+
 /// pgm kodas
+
+void pgm_nukopijuoti(Pgm * pgmIs, Pgm * pgmI) {
+    if (pgmIs == NULL || pgmI == NULL || pgmIs->aukstis == 0 || pgmIs->plotis == 0) {
+        printf("Nenurodytas pirmasis paveiksliukas\n");
+        return;
+    }
+    pgm_sukurti(pgmI, pgmIs->plotis, pgmIs->aukstis, 0);
+    int x,y;
+    for (x=0; x < pgmIs->plotis; x++)
+        for (y=0; y < pgmIs->aukstis; y++)
+            pgmI->pikseliai[y][x] = pgmIs->pikseliai[y][x];
+}
 
 void pgm_sukurti(Pgm * pgm, unsigned int plotis, unsigned int aukstis, unsigned char fonas) {
     if (pgm == NULL) {
