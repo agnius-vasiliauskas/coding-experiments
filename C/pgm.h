@@ -27,6 +27,8 @@ void koordDekartoIpoline(float x, float y, float * r, float * a);
 void koordPolineIDekarto(float r, float a, float * x, float * y);
 int apribotiRezius(int x, int a, int b);
 int sulietiDviSpalvas(unsigned char a, unsigned int b, double koeficentas);
+Koordinate atkarposIrPaveiksliukoKrastoSusikirtimas(Koordinate p1, Koordinate p2, Pgm * pgm);
+int atstumasTarpTasku(Koordinate p1, Koordinate p2);
 
 /// pgm prototipai
 void pgm_nukopijuoti(Pgm * pgmIs, Pgm * pgmI);
@@ -36,6 +38,43 @@ void pgm_sukurti(Pgm * pgm, unsigned int plotis, unsigned int aukstis, unsigned 
 void pgm_atlaisvinti(Pgm * pgm);
 
 /// Daznu funkciju kodas
+
+int atstumasTarpTasku(Koordinate p1, Koordinate p2) {
+    return sqrt((p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y));
+}
+
+static Koordinate atkarpuSusikirtimoTaskas(Koordinate p1, Koordinate p2, Koordinate p3, Koordinate p4) {
+    Koordinate sus;
+    int vardiklis = (p4.y-p3.y)*(p2.x-p1.x)-(p4.x-p3.x)*(p2.y-p1.y);
+    float ua = (float)((p4.x-p3.x)*(p1.y-p3.y)-(p4.y-p3.y)*(p1.x-p3.x))/(float)vardiklis;
+    float ub = (float)((p2.x-p1.x)*(p1.y-p3.y)-(p2.y-p1.y)*(p1.x-p3.x))/(float)vardiklis;
+    if (ua >= 0.0 && ua <= 1.0 && ub >= 0.0 && ub <= 1.0) {
+        sus.x = p1.x + ua*(p2.x-p1.x);
+        sus.y = p1.y + ua*(p2.y-p1.y);
+    }
+    else {
+        sus = (Koordinate){-1, -1};
+    }
+    return sus;
+}
+
+Koordinate atkarposIrPaveiksliukoKrastoSusikirtimas(Koordinate p1, Koordinate p2, Pgm * pgm) {
+    Koordinate susikirtimai[4];
+    Koordinate a = (Koordinate){0,0};
+    Koordinate b = (Koordinate){pgm->plotis-1,0};
+    Koordinate c = (Koordinate){pgm->plotis-1,pgm->aukstis-1};
+    Koordinate d = (Koordinate){0,pgm->aukstis-1};
+
+    susikirtimai[0] = atkarpuSusikirtimoTaskas(p1, p2, a, b);
+    susikirtimai[1] = atkarpuSusikirtimoTaskas(p1, p2, b, c);
+    susikirtimai[2] = atkarpuSusikirtimoTaskas(p1, p2, a, d);
+    susikirtimai[3] = atkarpuSusikirtimoTaskas(p1, p2, d, c);
+    int i;
+    for (i=0; i < 4; i++)
+        if (susikirtimai[i].x != -1 && susikirtimai[i].y != -1)
+            return susikirtimai[i];
+    return (Koordinate){-1,-1};
+}
 
 void koordDekartoIpoline(float x, float y, float * r, float * a) {
     *r = sqrt(x*x + y*y);
