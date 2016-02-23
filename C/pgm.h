@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 #define EILUTES_DYDIS_PGM 72
 #define SKAICIU_SKIRTUKAI " \t"
