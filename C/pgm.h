@@ -33,6 +33,7 @@ int atstumasTarpTasku(Koordinate p1, Koordinate p2);
 
 /// pgm prototipai
 void pgm_nukopijuoti(Pgm * pgmIs, Pgm * pgmI);
+void pgm_nukopijuotiSegmenta(Pgm * pgmIs, Pgm * pgmI, Koordinate blokoPradzia, Koordinate blokoDydis);
 void pgm_nuskaityti(Pgm * pgm, char * paveiksliukoByla);
 void pgm_irasyti(Pgm * pgm, char * paveiksliukoByla);
 void pgm_sukurti(Pgm * pgm, unsigned int plotis, unsigned int aukstis, unsigned char fonas);
@@ -107,6 +108,18 @@ void pgm_nukopijuoti(Pgm * pgmIs, Pgm * pgmI) {
     for (x=0; x < pgmIs->plotis; x++)
         for (y=0; y < pgmIs->aukstis; y++)
             pgmI->pikseliai[y][x] = pgmIs->pikseliai[y][x];
+}
+
+void pgm_nukopijuotiSegmenta(Pgm * pgmIs, Pgm * pgmI, Koordinate blokoPradzia, Koordinate blokoDydis) {
+    if (pgmIs == NULL || pgmI == NULL || pgmIs->aukstis == 0 || pgmIs->plotis == 0) {
+        printf("Nenurodytas pirmasis paveiksliukas\n");
+        return;
+    }
+    pgm_sukurti(pgmI, blokoDydis.x, blokoDydis.y, 0);
+    int x,y;
+    for (x=0; x < blokoDydis.x; x++)
+        for (y=0; y < blokoDydis.y; y++)
+            pgmI->pikseliai[y][x] = pgmIs->pikseliai[y+blokoPradzia.y][x+blokoPradzia.x];
 }
 
 void pgm_sukurti(Pgm * pgm, unsigned int plotis, unsigned int aukstis, unsigned char fonas) {
