@@ -18,6 +18,11 @@ typedef struct {
 } Koordinate;
 
 typedef struct {
+    float x;
+    float y;
+} KoordinateF;
+
+typedef struct {
  const unsigned int plotis;
  const unsigned int aukstis;
  unsigned char ** const pikseliai;
@@ -30,6 +35,10 @@ int apribotiRezius(int x, int a, int b);
 int sulietiDviSpalvas(unsigned char a, unsigned int b, double koeficentas);
 Koordinate atkarposIrPaveiksliukoKrastoSusikirtimas(Koordinate p1, Koordinate p2, Pgm * pgm);
 int atstumasTarpTasku(Koordinate p1, Koordinate p2);
+KoordinateF normalizuotiKoordinate(Koordinate koord);
+KoordinateF padaugintiKoordinate(KoordinateF koord, float sk);
+KoordinateF sudetiKoordinates(KoordinateF koord1, KoordinateF koord2);
+KoordinateF atimtiKoordinates(KoordinateF koord1, KoordinateF koord2);
 
 /// pgm prototipai
 void pgm_nukopijuoti(Pgm * pgmIs, Pgm * pgmI);
@@ -43,6 +52,24 @@ void pgm_atlaisvinti(Pgm * pgm);
 
 int atstumasTarpTasku(Koordinate p1, Koordinate p2) {
     return sqrt((p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y));
+}
+
+KoordinateF normalizuotiKoordinate(Koordinate koord) {
+    int ilgis = atstumasTarpTasku(koord, (Koordinate){0,0});
+    KoordinateF normK = {(float)koord.x/(float)ilgis, (float)koord.y/(float)ilgis};
+    return normK;
+}
+
+KoordinateF padaugintiKoordinate(KoordinateF koord, float sk) {
+    return (KoordinateF){koord.x * sk, koord.y * sk};
+}
+
+KoordinateF sudetiKoordinates(KoordinateF koord1, KoordinateF koord2) {
+    return (KoordinateF){koord1.x + koord2.x, koord1.y + koord2.y};
+}
+
+KoordinateF atimtiKoordinates(KoordinateF koord1, KoordinateF koord2) {
+    return (KoordinateF){koord1.x - koord2.x, koord1.y - koord2.y};
 }
 
 static Koordinate atkarpuSusikirtimoTaskas(Koordinate p1, Koordinate p2, Koordinate p3, Koordinate p4) {
