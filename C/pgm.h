@@ -1,5 +1,7 @@
 #pragma once
 
+#pragma GCC diagnostic warning "-Wempty-body"
+
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
