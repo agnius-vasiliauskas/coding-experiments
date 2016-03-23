@@ -34,6 +34,7 @@ typedef struct {
 void koordDekartoIpoline(float x, float y, float * r, float * a);
 void koordPolineIDekarto(float r, float a, float * x, float * y);
 int apribotiRezius(int x, int a, int b);
+float apribotiReziusF(float x, float a, float b);
 int sulietiDviSpalvas(unsigned char a, unsigned int b, double koeficentas);
 Koordinate atkarposIrPaveiksliukoKrastoSusikirtimas(Koordinate p1, Koordinate p2, Pgm * pgm);
 int atstumasTarpTasku(Koordinate p1, Koordinate p2);
@@ -118,6 +119,10 @@ void koordPolineIDekarto(float r, float a, float * x, float * y) {
 }
 
 int apribotiRezius(int x, int a, int b) {
+    return x < a ? a : x > b ? b : x;
+}
+
+float apribotiReziusF(float x, float a, float b) {
     return x < a ? a : x > b ? b : x;
 }
 
