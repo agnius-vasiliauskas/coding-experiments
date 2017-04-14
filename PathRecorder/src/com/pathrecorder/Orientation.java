@@ -15,7 +15,7 @@ public class Orientation implements SensorEventListener {
 
     private boolean magnetometerCalibrationPhase_1_Performed;
     private boolean magnetometerCalibrationPhase_2_Performed;
-    private float[] oldMagnetometerValues = new float[3];
+    private float[] oldMagnetometerValues;
     private float magnetometerAccuracyX;
     private float magnetometerAccuracyY;    
     private int magnetometerEventCounter;
@@ -101,7 +101,7 @@ public class Orientation implements SensorEventListener {
     	
     	return calibrationData;
     }
-
+    
     public void resetCalibration() {
     	InitOrientation();
     	this.isCalibration = true;
@@ -125,9 +125,9 @@ public class Orientation implements SensorEventListener {
 				return;
 			}
     	}
-
-        System.arraycopy(event.values, 0, oldMagnetometerValues, 0, 3);
-
+		
+		oldMagnetometerValues = event.values;		
+		
 		// updating progress
 		int percentsCal =  (int) (100.0f * ((float)this.magnetometerEventCounter / (float)this.MAGNETOMETER_MAX_EVENTS) );
 		sketchView.setMessages("Magnetometer calibration:", String.format("Phase 1 (%d complete)", percentsCal));		
@@ -197,33 +197,31 @@ public class Orientation implements SensorEventListener {
     private void performMagnetometerCalibrationPhase_2(SensorEvent event) {
 		float[] magneticFieldAmplitude =  new float[3];
 		
-		if (oldMagnetometerValues == null) {
-            oldMagnetometerValues = new float[3];
-        }
+		if (oldMagnetometerValues != null) {
 			
-        float magFieldChangeX = Math.abs(event.values[0] - oldMagnetometerValues[0]);
-        float magFieldChangeY = Math.abs(event.values[1] - oldMagnetometerValues[1]);
-
-        float epsilonX = (float)MAGNETOMETER_ACCURACY_FACTOR * magnetometerAccuracyX;
-        float epsilonY = (float)MAGNETOMETER_ACCURACY_FACTOR * magnetometerAccuracyY;
-
-        magneticFieldAmplitude[0] = (magFieldChangeX > epsilonX) ? event.values[0] : oldMagnetometerValues[0];
-        magneticFieldAmplitude[1] = (magFieldChangeY > epsilonY) ? event.values[1] : oldMagnetometerValues[1];
-        magneticFieldAmplitude[2] = event.values[2];
-
-        if (magneticFieldAmplitude[0] != oldMagnetometerValues[0])
-            calibrationXvalues.add(magneticFieldAmplitude[0]);
-
-        if (magneticFieldAmplitude[1] != oldMagnetometerValues[1])
-            calibrationYvalues.add(magneticFieldAmplitude[1]);
-
-        checkCalibrationPhase2ErrorCondition(epsilonX, epsilonY);
-
-        checkCalibrationPhase2Termination(epsilonX, epsilonY);
-
-
-        System.arraycopy(magneticFieldAmplitude, 0, oldMagnetometerValues, 0, 3);
-
+			float magFieldChangeX = Math.abs(event.values[0] - oldMagnetometerValues[0]);
+			float magFieldChangeY = Math.abs(event.values[1] - oldMagnetometerValues[1]);
+			
+			float epsilonX = (float)MAGNETOMETER_ACCURACY_FACTOR * magnetometerAccuracyX;
+			float epsilonY = (float)MAGNETOMETER_ACCURACY_FACTOR * magnetometerAccuracyY;
+			
+			magneticFieldAmplitude[0] = (magFieldChangeX > epsilonX) ? event.values[0] : oldMagnetometerValues[0];
+			magneticFieldAmplitude[1] = (magFieldChangeY > epsilonY) ? event.values[1] : oldMagnetometerValues[1];
+			magneticFieldAmplitude[2] = event.values[2];
+			
+			if (magneticFieldAmplitude[0] != oldMagnetometerValues[0])
+				calibrationXvalues.add(magneticFieldAmplitude[0]);
+			
+			if (magneticFieldAmplitude[1] != oldMagnetometerValues[1])
+				calibrationYvalues.add(magneticFieldAmplitude[1]);
+			
+			checkCalibrationPhase2ErrorCondition(epsilonX, epsilonY);
+			
+			checkCalibrationPhase2Termination(epsilonX, epsilonY);
+		}
+		
+		oldMagnetometerValues = magneticFieldAmplitude;
+    	
     }
     
     private int degreesToNorthPole(SensorEvent event) {
