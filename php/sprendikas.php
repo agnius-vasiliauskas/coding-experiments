@@ -1,6 +1,8 @@
 <?php
 
-// pirmoji versija
+// autorius: Agnius
+// versija: 0.1
+// licenzija: klausti autoriaus
 
 class Objektas {
     public $pavadinimas;
