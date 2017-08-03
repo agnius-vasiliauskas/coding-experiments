@@ -1,5 +1,7 @@
 <?php
 
+// pirmoji versija
+
 class Objektas {
     public $pavadinimas;
     public $id;
