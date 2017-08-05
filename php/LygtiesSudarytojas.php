@@ -7,31 +7,19 @@
  */
 
 class LygtiesSudarytojas {
-    public $sprendimoTipas;
     public $lygtis;
+    public $zinute;
     public $klausiamiVienetai;
 
-    function __construct($rysiai)
-    {
-        // nustatome atsakymo vienetus
-        foreach ($rysiai as $rysys) {
-            foreach ($rysys->arrMatmenys as $matmuo) {
-                if (!preg_match('/\d+(?:\.\d+)?/mui', $matmuo->kiekis)) {
-                    $this->klausiamiVienetai = $matmuo->vienetaiTrumpas;
-                    goto TOLIAU;
-                }
-            }
-        }
-
-        TOLIAU:
+    protected function sp_01($rysiai) {
 
         if (count($rysiai) != 2)
-            throw new Exception("Nemoku išspręsti uždavinio");
+            return [null, "ryšių kiekis nėra 2"];
 
         // ar matmenu tik po 2 ?
         foreach ($rysiai as $rysys) {
             if (count($rysys->arrMatmenys) != 2)
-                throw new Exception("Nemoku išspręsti uždavinio");
+                return [null, "matmenų kiekis objekte nėra 2"];
         }
 
         // parusiuojame objekto matmenis pagal tipa
@@ -51,18 +39,49 @@ class LygtiesSudarytojas {
         $id2 = $rysiai[1]->id;
 
         if ($id1 != $id2)
-            throw new Exception("Nemoku išspręsti uždavinio");
+            return [null, "Matmenys priskirti skirtingiems objektams"];
 
         // ar sutampa tipai ?
         for ($m=0; $m < 2; $m++) {
             $tipas1 = $rysiai[0]->arrMatmenys[$m]->tipas;
             $tipas2 = $rysiai[1]->arrMatmenys[$m]->tipas;
             if ($tipas1 != $tipas2)
-                throw new Exception("Nemoku išspręsti uždavinio");
+                return [null, "Matmenų tipai skiriasi tarp objektų"];
         }
 
-        $this->sprendimoTipas = 'ANALOGIJA';
+        return ["{$rysiai[0]->arrMatmenys[0]->kiekis} * {$rysiai[1]->arrMatmenys[1]->kiekis} = {$rysiai[0]->arrMatmenys[1]->kiekis} * {$rysiai[1]->arrMatmenys[0]->kiekis}", "ok"];
+    }
 
-        $this->lygtis = "{$rysiai[0]->arrMatmenys[0]->kiekis} * {$rysiai[1]->arrMatmenys[1]->kiekis} = {$rysiai[0]->arrMatmenys[1]->kiekis} * {$rysiai[1]->arrMatmenys[0]->kiekis}";
+    protected function sp_02($rysiai) {
+        return [null, "Nesuprogramuota"];
+    }
+
+    function __construct($rysiai)
+    {
+        // nustatome atsakymo vienetus
+        foreach ($rysiai as $rysys) {
+            foreach ($rysys->arrMatmenys as $matmuo) {
+                if (!preg_match('/\d+(?:\.\d+)?/mui', $matmuo->kiekis)) {
+                    $this->klausiamiVienetai = $matmuo->vienetaiTrumpas;
+                    goto TOLIAU;
+                }
+            }
+        }
+
+        TOLIAU:
+
+        // ieškome atsakymo
+        $methods = get_class_methods('LygtiesSudarytojas');
+
+        foreach ($methods as $method) {
+            if (preg_match('/^sp_/mui', $method)) {
+                list($lygtis, $statusas) = $this->$method($rysiai);
+                $this->lygtis = $lygtis;
+                $this->zinute .= ($this->zinute ? "<br>" : "") . $method . " : " . $statusas;
+                if ($lygtis)
+                    break;
+            }
+        }
+
     }
 }
